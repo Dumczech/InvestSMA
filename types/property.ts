@@ -1,0 +1,1 @@
+export type Property={slug:string;name:string;neighborhood:string;price:string;bedrooms:number;adr:string;annualGross:string;upgradePotential:string;thesis:string;occupancy:string;strategy:string;seasonality:string;risks:string[];images:string[]};
