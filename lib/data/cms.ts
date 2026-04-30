@@ -26,3 +26,27 @@ export async function getPublishedArticles(){
   const {data}=await supabase.from('articles').select('*').eq('published',true);
   return data ?? [];
 }
+
+
+export async function getPropertyBySlug(slug:string){
+  if(!hasEnv()) return fallbackProperties.find((p)=>p.slug===slug) ?? null;
+  const supabase=getSupabaseServerClient();
+  const {data}=await supabase.from('properties').select('*').eq('slug',slug).eq('status','published').maybeSingle();
+  if(!data) return fallbackProperties.find((p)=>p.slug===slug) ?? null;
+  return {
+    slug:data.slug,
+    name:data.name,
+    neighborhood:data.neighborhood,
+    price:data.price_usd?`$${Number(data.price_usd).toLocaleString()}`:'TBD',
+    bedrooms:data.bedrooms||0,
+    adr:`$${data.adr_low||0}–$${data.adr_high||0}`,
+    annualGross:`$${data.annual_gross_low||0}–$${data.annual_gross_high||0}`,
+    upgradePotential:data.upgrade_potential||'Operational optimization',
+    thesis:data.investment_thesis||'Data-backed opportunity',
+    occupancy:data.occupancy_assumption||'TBD',
+    strategy:data.strategy||'LRM strategy',
+    seasonality:data.seasonality||'Seasonality upside',
+    risks:Array.isArray(data.risks)?data.risks:['Pending'],
+    images:Array.isArray(data.images)&&data.images.length?data.images:['/hero1.jpg']
+  };
+}
