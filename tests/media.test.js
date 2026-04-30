@@ -1,5 +1,7 @@
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const { startServer, jget, jpost, jpatch, jdelete } = require('./helpers');
 
 let server;
@@ -117,4 +119,126 @@ test('POST /api/folders rejects ids with bad characters', async () => {
   });
   assert.equal(status, 400);
   assert.equal(body.error, 'invalid_id');
+});
+
+// ---------- Multipart upload ----------
+
+// Minimal valid 1x1 PNG so multer's mime-sniff (via libmagic-style content
+// inspection isn't done — multer trusts the declared content-type) accepts it.
+const PNG_1x1 = Buffer.from(
+  '89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4' +
+  '890000000d49444154789c63f8cfc0c0c0000005000101a5b6ed130000000049454e44ae426082',
+  'hex'
+);
+
+async function uploadFiles({ files, folder }) {
+  const fd = new FormData();
+  for (const f of files) {
+    fd.append('files', new Blob([f.buffer], { type: f.type }), f.name);
+  }
+  if (folder) fd.append('folder', folder);
+  const r = await fetch(`${server.url}/api/media/upload`, { method: 'POST', body: fd });
+  const text = await r.text();
+  let body; try { body = text ? JSON.parse(text) : null; } catch { body = text; }
+  return { status: r.status, body };
+}
+
+test('POST /api/media/upload stores file on disk and registers an asset', async () => {
+  const beforeCount = (await jget(`${server.url}/api/media`)).body.totalAll;
+
+  const { status, body } = await uploadFiles({
+    folder: 'site/hero',
+    files: [{ name: 'pixel.png', type: 'image/png', buffer: PNG_1x1 }],
+  });
+  assert.equal(status, 201);
+  assert.equal(body.items.length, 1);
+  const created = body.items[0];
+  assert.equal(created.kind, 'image');
+  assert.equal(created.folder, 'site/hero');
+  assert.match(created.url, /^\/uploads\/pixel-/);
+
+  // File actually written to disk under /uploads
+  const filename = path.basename(created.url);
+  const onDisk = path.join(__dirname, '..', 'uploads', filename);
+  assert.ok(fs.existsSync(onDisk), `expected uploaded file at ${onDisk}`);
+  assert.equal(fs.statSync(onDisk).size, PNG_1x1.length);
+
+  // The static handler serves it
+  const fetched = await fetch(`${server.url}${created.url}`);
+  assert.equal(fetched.status, 200);
+
+  // And it shows up in the listing
+  const after = (await jget(`${server.url}/api/media`)).body.totalAll;
+  assert.equal(after, beforeCount + 1);
+
+  // Cleanup so repeated test runs don't pile up files
+  fs.unlinkSync(onDisk);
+});
+
+test('POST /api/media/upload rejects disallowed mime types', async () => {
+  const { status, body } = await uploadFiles({
+    files: [{ name: 'evil.txt', type: 'text/plain', buffer: Buffer.from('hi') }],
+  });
+  assert.equal(status, 400);
+  assert.equal(body.error, 'upload_failed');
+  assert.match(body.message, /Unsupported file type/);
+});
+
+test('POST /api/media/upload accepts no files and returns an empty list', async () => {
+  // multer is happy with zero files; the route just returns items: [].
+  const fd = new FormData();
+  fd.append('folder', 'site/hero');
+  const r = await fetch(`${server.url}/api/media/upload`, { method: 'POST', body: fd });
+  assert.equal(r.status, 201);
+  const body = await r.json();
+  assert.deepEqual(body.items, []);
+});
+
+// ---------- Bulk tag ----------
+
+test('POST /api/media/bulk tag adds tags to every selected asset', async () => {
+  const a = (await jpost(`${server.url}/api/media/from-url`, {
+    url: 'https://example.com/a.jpg', folder: 'site/hero', tags: [],
+  })).body;
+  const b = (await jpost(`${server.url}/api/media/from-url`, {
+    url: 'https://example.com/b.jpg', folder: 'site/hero', tags: [],
+  })).body;
+
+  const res = await jpost(`${server.url}/api/media/bulk`, {
+    action: 'tag', ids: [a.id, b.id], tags: ['featured', 'q2-2026'],
+  });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.action, 'tag');
+  assert.equal(res.body.affected, 4);  // 2 assets * 2 tags
+
+  for (const id of [a.id, b.id]) {
+    const got = (await jget(`${server.url}/api/media/${id}`)).body;
+    const tags = [...got.tags].sort();
+    assert.ok(tags.includes('featured'), `expected 'featured' on ${id}, got ${tags}`);
+    assert.ok(tags.includes('q2-2026'), `expected 'q2-2026' on ${id}, got ${tags}`);
+  }
+});
+
+test('POST /api/media/bulk tag rejects empty tag list', async () => {
+  const { status, body } = await jpost(`${server.url}/api/media/bulk`, {
+    action: 'tag', ids: ['m-001'], tags: [],
+  });
+  assert.equal(status, 400);
+  assert.equal(body.error, 'tags_required');
+});
+
+test('POST /api/media/bulk tag is idempotent on the same tag', async () => {
+  const before = (await jget(`${server.url}/api/media/m-002`)).body.tags;
+
+  await jpost(`${server.url}/api/media/bulk`, {
+    action: 'tag', ids: ['m-002'], tags: ['repeatme'],
+  });
+  await jpost(`${server.url}/api/media/bulk`, {
+    action: 'tag', ids: ['m-002'], tags: ['repeatme'],
+  });
+
+  const after = (await jget(`${server.url}/api/media/m-002`)).body.tags;
+  assert.equal(after.filter(t => t === 'repeatme').length, 1);
+  // existing tags untouched
+  for (const t of before) assert.ok(after.includes(t));
 });
