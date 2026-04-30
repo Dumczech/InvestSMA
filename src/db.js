@@ -1,65 +1,155 @@
-const path = require('path');
-const fs = require('fs');
-const Database = require('better-sqlite3');
+// src/db.js
+// Supabase-only data layer (no filesystem access, no top-level side effects)
 
-const DATA_DIR = path.join(__dirname, '..', 'data');
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+import { createClient } from '@supabase/supabase-js';
 
-const DB_PATH = process.env.INVESTSMA_DB || path.join(DATA_DIR, 'investsma.db');
-const db = new Database(DB_PATH);
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
+let _anonClient = null;
+let _adminClient = null;
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS media_assets (
-    id          TEXT PRIMARY KEY,
-    kind        TEXT NOT NULL CHECK (kind IN ('image', 'video', 'document')),
-    name        TEXT NOT NULL,
-    folder      TEXT NOT NULL,
-    url         TEXT NOT NULL,
-    thumb       TEXT,
-    size_bytes  INTEGER NOT NULL DEFAULT 0,
-    width       INTEGER,
-    height      INTEGER,
-    dims_label  TEXT,
-    duration    TEXT,
-    alt         TEXT,
-    uploaded    TEXT NOT NULL,
-    created_at  TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
-  );
+function getEnv(name) {
+  const value = process.env[name];
+  if (!value) throw new Error(`Missing required env var: ${name}`);
+  return value;
+}
 
-  CREATE INDEX IF NOT EXISTS idx_media_folder   ON media_assets(folder);
-  CREATE INDEX IF NOT EXISTS idx_media_kind     ON media_assets(kind);
-  CREATE INDEX IF NOT EXISTS idx_media_uploaded ON media_assets(uploaded);
+function getAnonClient() {
+  if (_anonClient) return _anonClient;
 
-  CREATE TABLE IF NOT EXISTS media_tags (
-    asset_id TEXT NOT NULL REFERENCES media_assets(id) ON DELETE CASCADE,
-    tag      TEXT NOT NULL,
-    PRIMARY KEY (asset_id, tag)
-  );
-  CREATE INDEX IF NOT EXISTS idx_media_tags_tag ON media_tags(tag);
+  const url = getEnv('NEXT_PUBLIC_SUPABASE_URL');
+  const anonKey = getEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY');
 
-  CREATE TABLE IF NOT EXISTS media_usages (
-    asset_id  TEXT NOT NULL REFERENCES media_assets(id) ON DELETE CASCADE,
-    label     TEXT NOT NULL,
-    target_url TEXT,
-    PRIMARY KEY (asset_id, label)
-  );
+  _anonClient = createClient(url, anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
 
-  CREATE TABLE IF NOT EXISTS folders (
-    id     TEXT PRIMARY KEY,
-    label  TEXT NOT NULL,
-    icon   TEXT,
-    depth  INTEGER NOT NULL DEFAULT 0,
-    sort   INTEGER NOT NULL DEFAULT 0
-  );
+  return _anonClient;
+}
 
-  CREATE TABLE IF NOT EXISTS settings (
-    key   TEXT PRIMARY KEY,
-    value TEXT
-  );
-`);
+function getAdminClient() {
+  if (_adminClient) return _adminClient;
 
-module.exports = db;
-module.exports.DB_PATH = DB_PATH;
+  const url = getEnv('NEXT_PUBLIC_SUPABASE_URL');
+  const serviceRoleKey = getEnv('SUPABASE_SERVICE_ROLE_KEY');
+
+  _adminClient = createClient(url, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  return _adminClient;
+}
+
+/**
+ * Generic read helper
+ */
+export async function selectRows(table, {
+  columns = '*',
+  filters = [],
+  orderBy,
+  ascending = true,
+  limit,
+  single = false,
+  useAdmin = false,
+} = {}) {
+  const client = useAdmin ? getAdminClient() : getAnonClient();
+  let query = client.from(table).select(columns);
+
+  for (const f of filters) {
+    if (!f || !f.op) continue;
+    const { op, column, value } = f;
+    if (op === 'eq') query = query.eq(column, value);
+    if (op === 'in') query = query.in(column, value);
+    if (op === 'neq') query = query.neq(column, value);
+    if (op === 'gte') query = query.gte(column, value);
+    if (op === 'lte') query = query.lte(column, value);
+    if (op === 'like') query = query.like(column, value);
+    if (op === 'ilike') query = query.ilike(column, value);
+  }
+
+  if (orderBy) query = query.order(orderBy, { ascending });
+  if (limit) query = query.limit(limit);
+  if (single) query = query.maybeSingle();
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Insert helper
+ */
+export async function insertRows(table, payload, { useAdmin = true } = {}) {
+  const client = useAdmin ? getAdminClient() : getAnonClient();
+  const rows = Array.isArray(payload) ? payload : [payload];
+
+  const { data, error } = await client
+    .from(table)
+    .insert(rows)
+    .select('*');
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Upsert helper
+ */
+export async function upsertRows(table, payload, {
+  onConflict,
+  ignoreDuplicates = false,
+  useAdmin = true,
+} = {}) {
+  const client = useAdmin ? getAdminClient() : getAnonClient();
+  const rows = Array.isArray(payload) ? payload : [payload];
+
+  const { data, error } = await client
+    .from(table)
+    .upsert(rows, { onConflict, ignoreDuplicates })
+    .select('*');
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Update helper
+ */
+export async function updateRows(table, values, {
+  filters = [],
+  useAdmin = true,
+} = {}) {
+  const client = useAdmin ? getAdminClient() : getAnonClient();
+  let query = client.from(table).update(values);
+
+  for (const f of filters) {
+    if (!f || !f.op) continue;
+    const { op, column, value } = f;
+    if (op === 'eq') query = query.eq(column, value);
+    if (op === 'in') query = query.in(column, value);
+  }
+
+  const { data, error } = await query.select('*');
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Delete helper
+ */
+export async function deleteRows(table, {
+  filters = [],
+  useAdmin = true,
+} = {}) {
+  const client = useAdmin ? getAdminClient() : getAnonClient();
+  let query = client.from(table).delete();
+
+  for (const f of filters) {
+    if (!f || !f.op) continue;
+    const { op, column, value } = f;
+    if (op === 'eq') query = query.eq(column, value);
+    if (op === 'in') query = query.in(column, value);
+  }
+
+  const { data, error } = await query.select('*');
+  if (error) throw error;
+  return data;
+}
