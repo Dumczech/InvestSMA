@@ -2,22 +2,28 @@
   "name": "investsma",
   "version": "0.1.0",
   "private": true,
-  "description": "InvestSMA admin backend — Media Library and supporting APIs",
-  "main": "src/server.js",
-  "type": "commonjs",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "node --watch src/server.js",
-    "seed": "node src/seed.js",
-    "reset": "node src/seed.js --reset"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
   },
   "dependencies": {
-    "better-sqlite3": "^11.3.0",
-    "express": "^4.21.0",
-    "multer": "^1.4.5-lts.1",
-    "nanoid": "^3.3.7"
+    "framer-motion": "^11.11.11",
+    "next": "15.0.3",
+    "react": "19.0.0-rc-69d4b800-20241021",
+    "react-dom": "19.0.0-rc-69d4b800-20241021",
+    "recharts": "^2.13.3",
+    "@supabase/supabase-js": "^2.49.8",
+    "resend": "^4.0.0"
   },
-  "engines": {
-    "node": ">=18"
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.16",
+    "typescript": "^5.7.2"
   }
 }

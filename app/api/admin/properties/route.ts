@@ -1,0 +1,2 @@
+import { NextRequest, NextResponse } from 'next/server'; import { getSupabaseServerClient } from '@/lib/supabase/server';
+export async function POST(req:NextRequest){const body=await req.json(); try{const s=getSupabaseServerClient(); const {error}=await s.from('properties').upsert(body,{onConflict:'slug'}); if(error) throw error; return NextResponse.json({ok:true});}catch{return NextResponse.json({ok:false},{status:500});}}

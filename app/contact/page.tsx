@@ -1,0 +1,4 @@
+import type { Metadata } from 'next';
+import { SectionHeader } from '@/components/site';
+export const metadata: Metadata={title:'Contact | InvestSMA Investor Access',description:'Apply for investor access to San Miguel luxury homes and income-producing opportunities.'};
+export default function Contact(){return <main className='mx-auto max-w-3xl p-6'><SectionHeader title='Request Investor Access' subtitle='Apply for curated opportunities, market intelligence, and underwriting support.'/><div className='grid gap-3 md:grid-cols-2'>{['Name','Email','Phone','Budget','Timeline','Buyer type','Interested neighborhoods'].map(f=><input key={f} placeholder={f} className='rounded border border-white/20 bg-black/20 p-3'/>) }<textarea placeholder='Message' className='rounded border border-white/20 bg-black/20 p-3 md:col-span-2'/></div><button className='mt-4 rounded bg-gold px-4 py-2 text-black'>Request Investor Access</button></main>}

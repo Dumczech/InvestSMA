@@ -1,0 +1,3 @@
+'use client';
+import { useState } from 'react';
+export default function Page(){const [msg,setMsg]=useState(''); const save=async()=>{const r=await fetch('/api/admin/content',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({key:'homepage_hero',value:{headline:'Updated headline',subheadline:'Updated subheadline'}})}); setMsg(JSON.stringify(await r.json()));}; return <main className='mx-auto max-w-5xl p-6'><h1 className='text-2xl'>Content CMS</h1><p className='text-white/70 mt-2'>Control homepage hero text and global content blocks.</p><button onClick={save} className='mt-4 rounded bg-gold px-3 py-2 text-black'>Save sample hero text</button><p className='mt-2 text-sm'>{msg}</p></main>}
