@@ -8,6 +8,7 @@ const { seed } = require('./seed');
 const mediaRoutes = require('./routes/media');
 const folderRoutes = require('./routes/folders');
 const storageRoutes = require('./routes/storage');
+const legalRoutes = require('./routes/legal');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -16,8 +17,9 @@ const UPLOAD_DIR = path.join(__dirname, '..', 'uploads');
 
 // Auto-seed on first boot so the design lights up immediately after `npm start`.
 const assetCount = db.prepare(`SELECT COUNT(*) AS n FROM media_assets`).get().n;
-if (assetCount === 0) {
-  console.log('Empty database detected — seeding placeholder media assets.');
+const legalCount = db.prepare(`SELECT COUNT(*) AS n FROM legal_documents`).get().n;
+if (assetCount === 0 || legalCount === 0) {
+  console.log('Empty database detected — seeding placeholder content.');
   seed();
 }
 
@@ -31,6 +33,7 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/media',   mediaRoutes);
 app.use('/api/folders', folderRoutes);
 app.use('/api/storage', storageRoutes);
+app.use('/api/legal',   legalRoutes);
 
 app.use('/uploads', express.static(UPLOAD_DIR, { fallthrough: true, maxAge: '7d' }));
 app.use(express.static(PUBLIC_DIR, { extensions: ['html'] }));

@@ -59,6 +59,29 @@ db.exec(`
     key   TEXT PRIMARY KEY,
     value TEXT
   );
+
+  CREATE TABLE IF NOT EXISTS legal_documents (
+    slug         TEXT PRIMARY KEY,
+    title        TEXT NOT NULL,
+    intro        TEXT,
+    section_num  TEXT NOT NULL,
+    content      TEXT NOT NULL,
+    version      TEXT NOT NULL,
+    doc_code     TEXT,
+    last_updated TEXT NOT NULL,
+    updated_at   TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS legal_acceptances (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    email       TEXT,
+    intent      TEXT NOT NULL DEFAULT 'engagement',
+    documents   TEXT NOT NULL,
+    ip          TEXT,
+    user_agent  TEXT,
+    accepted_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_legal_acc_accepted ON legal_acceptances(accepted_at DESC);
 `);
 
 module.exports = db;

@@ -5,7 +5,9 @@ data/*.db-shm
 data/*.db-wal
 uploads/
 design/
+design2/
 design.tar.gz
+design2.tar.gz
 .env
 .DS_Store
 *.log

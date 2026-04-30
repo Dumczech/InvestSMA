@@ -1,22 +1,33 @@
-# InvestSMA — Admin Backend
+# InvestSMA — Backend
 
-Node + Express + SQLite backend for the InvestSMA admin. The first page wired up
-is **Media Library** (`admin/media.html`) — the design from the Claude Design
-handoff is rendered as-is, with all data flowing through this server.
+Node + Express + SQLite backend for the InvestSMA site + admin. Pages wired up
+so far:
+
+- `/admin/media.html` — Media Library (filter, sort, multi-select, bulk ops, upload, picker)
+- `/legal/legal.html` — Disclosures & Terms of Use (with acceptance recording)
 
 ## Run
 
 ```bash
 npm install
-npm start          # http://localhost:3000/admin/media.html
+npm start          # http://localhost:3000
 ```
 
-The database auto-seeds on first boot from the placeholder `MEDIA_ASSETS` /
-`MEDIA_FOLDERS` data in the design bundle. To reset:
+The database auto-seeds on first boot. To reset:
 
 ```bash
 npm run reset
 ```
+
+## Test
+
+```bash
+npm test
+```
+
+Uses Node's built-in `--test` runner. The suite spins up the express app on a
+temp SQLite database, exercises every public route, and asserts both happy and
+error paths. **All tests must pass for new builds.**
 
 ## Layout
 
@@ -27,11 +38,16 @@ src/
   seed.js            Placeholder data, mirrors the design's MEDIA_ASSETS
   util/format.js     Bytes ⇄ "2.4 MB" and "4032×3024" parsing
   repo/media.js      Data-access layer (queries + mappers)
+  seed-legal.js      Disclosures + Terms content from the design's legal.jsx
+  repo/legal.js      Legal documents + acceptance log
   routes/
     media.js         /api/media — list, get, patch, delete, bulk, upload, from-url
     folders.js       /api/folders — tree + counts, create
     storage.js       /api/storage — used / quota / percent
-public/admin/        Design files (HTML/CSS/JSX) wired to /api/*
+    legal.js         /api/legal — documents + acceptances
+public/admin/        Media library design files wired to /api/*
+public/legal/        Legal page design files wired to /api/legal
+tests/               node --test suite (format, media, legal)
 uploads/             multipart upload destination (gitignored)
 data/                SQLite database (gitignored)
 ```
@@ -50,6 +66,10 @@ data/                SQLite database (gitignored)
 | GET    | `/api/folders` | tree with rolled-up counts including subfolders |
 | POST   | `/api/folders` | `{ id, label, icon? }` |
 | GET    | `/api/storage` | `{ used, quota, usedBytes, quotaBytes, percent, total, images, videos }` |
+| GET    | `/api/legal` | both documents + version metadata for `legal.html` |
+| GET    | `/api/legal/:slug` | single legal document (`disclosures` or `terms`) |
+| POST   | `/api/legal/acceptances` | record acknowledgement (intent, email?, documents[]) |
+| GET    | `/api/legal/acceptances` | list recorded acceptances (admin) |
 | GET    | `/api/health` | liveness probe |
 
 ### Filter / sort semantics

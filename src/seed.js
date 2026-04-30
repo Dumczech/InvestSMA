@@ -3,6 +3,7 @@
 
 const db = require('./db');
 const { parseSizeToBytes, parseDimsToWidthHeight } = require('./util/format');
+const { seedLegal } = require('./seed-legal');
 
 const SMA_PHOTO = (seed, w = 1200, h = 800) =>
   `https://images.unsplash.com/photo-${seed}?w=${w}&h=${h}&fit=crop&q=80`;
@@ -59,6 +60,8 @@ function seed({ reset = false } = {}) {
       DELETE FROM media_tags;
       DELETE FROM media_assets;
       DELETE FROM folders;
+      DELETE FROM legal_acceptances;
+      DELETE FROM legal_documents;
     `);
   }
 
@@ -103,8 +106,11 @@ function seed({ reset = false } = {}) {
   });
   tx();
 
+  seedLegal();
+
   const count = db.prepare(`SELECT COUNT(*) as n FROM media_assets`).get().n;
-  console.log(`Seeded ${count} media assets, ${SEED_FOLDERS.length} folders.`);
+  const legal = db.prepare(`SELECT COUNT(*) as n FROM legal_documents`).get().n;
+  console.log(`Seeded ${count} media assets, ${SEED_FOLDERS.length} folders, ${legal} legal documents.`);
 }
 
 if (require.main === module) {
