@@ -1,5 +1,131 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-body{background:#121212;color:#F4F0E6}
-.card{@apply rounded-2xl border border-white/10 bg-white/5 backdrop-blur;}
+
+/* ===========================================================================
+   Design system tokens — InvestSMA editorial palette.
+   These replace the previous one-off `body{background:#121212}` so pages built
+   from the Claude Design bundle (legal, eventually properties/memo) can render
+   pixel-perfect using the same CSS variables and helper classes the prototypes
+   used. Existing pages still use Tailwind utilities; nothing here breaks them.
+   =========================================================================== */
+
+:root {
+  /* Core palette */
+  --ink:        #14130F;
+  --ink-2:      #1F1D18;
+  --ink-3:      #2A2722;
+  --ink-line:   #3A362F;
+  --sand:       #D9CFB8;
+  --sand-2:     #C4B898;
+  --sand-3:     #ECE3CD;
+  --ivory:      #F5EFE2;
+  --ivory-2:    #FAF6EC;
+  --paper:      #FBF8F0;
+  --green:      #1F3A2E;
+  --green-2:    #2C5240;
+  --green-3:    #3F6B55;
+  --gold:       #B08A3E;
+  --gold-2:     #C9A55A;
+  --gold-3:     #8E6F2D;
+
+  --container-w: 1440px;
+}
+
+body {
+  background: #121212;
+  color: #F4F0E6;
+}
+
+.card {
+  @apply rounded-2xl border border-white/10 bg-white/5 backdrop-blur;
+}
+
+/* ===== Typography helpers (used by bundle-style pages) ===== */
+.display {
+  font-family: var(--f-display, 'Cormorant Garamond', Georgia, serif);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 0.98;
+  font-feature-settings: 'liga', 'dlig', 'ss01';
+}
+.display-italic { font-style: italic; }
+.mono { font-family: var(--f-mono, 'JetBrains Mono', ui-monospace, monospace); font-feature-settings: 'tnum' 1; }
+.tnum { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum' 1; }
+.lead-num {
+  font-family: var(--f-mono, monospace);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gold-2);
+  font-weight: 500;
+}
+.data-label {
+  font-family: var(--f-mono, monospace);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-weight: 500;
+}
+.dark .data-label,
+.surface-dark .data-label {
+  color: var(--sand-2);
+}
+
+/* ===== Buttons (used by bundle-style pages) ===== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 22px;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  font-weight: 500;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  transition: all 160ms ease;
+  text-transform: uppercase;
+  font-family: var(--f-sans, 'Inter', sans-serif);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-primary {
+  background: var(--ink);
+  color: var(--ivory);
+  border-color: var(--ink);
+}
+.btn-primary:hover { background: var(--green); border-color: var(--green); }
+.btn-gold {
+  background: var(--gold);
+  color: var(--ink);
+  border-color: var(--gold);
+}
+.btn-gold:hover { background: var(--gold-2); border-color: var(--gold-2); }
+.btn-ghost {
+  background: transparent;
+  color: var(--ink);
+  border-color: rgba(20, 19, 15, 0.3);
+}
+.btn-ghost:hover { background: var(--ink); color: var(--ivory); border-color: var(--ink); }
+.dark .btn-ghost { color: var(--ivory); border-color: rgba(245, 239, 226, 0.3); }
+.dark .btn-ghost:hover { background: var(--ivory); color: var(--ink); }
+
+/* Container — bundle pages opt in via .doc-page > .container */
+.doc-page .container {
+  max-width: var(--container-w);
+  margin: 0 auto;
+  padding: 0 32px;
+}
+
+/* Bundle-style pages render their own dark/cream sections; opt out of the
+   global dark body background by wrapping the page in .doc-page so its
+   sections control their own surfaces. */
+.doc-page {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--f-sans, 'Inter', sans-serif);
+  font-size: 15px;
+  line-height: 1.55;
+}
