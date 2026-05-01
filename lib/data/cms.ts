@@ -2,18 +2,106 @@ import { getSupabaseServerClient } from '@/lib/supabase/server';
 import { properties as fallbackProperties } from '@/data/properties';
 import type { MarketMetric, Trend, Unit } from '@/types/market';
 
-const hasEnv=()=>Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+const hasEnv = () =>
+  Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-export async function getHomepageContent(){
-  if(!hasEnv()) return {hero:{headline:'Invest in San Miguel de Allende’s Most Desirable Luxury Rental Market',subheadline:'Access real rental performance data, curated acquisition opportunities, and turnkey management from one of San Miguel’s leading luxury rental operators.'},metrics:[{label:'Luxury units managed',value:'45+'},{label:'Guest database',value:'10,000+'},{label:'Direct booking network',value:'Strong'},{label:'Concierge & operations',value:'Full team'}],usingMock:true};
-  const supabase=getSupabaseServerClient();
-  const {data}=await supabase.from('site_content').select('key,value').in('key',['homepage_hero','homepage_metrics']);
-  // value is typed as Json; the CMS stores arbitrary editor-shaped objects so
+// Default content used when Supabase env vars are absent or the matching
+// site_content row is missing. Defaults are kept identical to the original
+// hardcoded copy so the page is unchanged in mock mode.
+const DEFAULT_HOMEPAGE = {
+  hero: {
+    headline: 'Invest in San Miguel de Allende’s Most Desirable Luxury Rental Market',
+    subheadline:
+      'Access real rental performance data, curated acquisition opportunities, and turnkey management from one of San Miguel’s leading luxury rental operators.',
+  },
+  metrics: [
+    { label: 'Luxury units managed', value: '45+' },
+    { label: 'Guest database',      value: '10,000+' },
+    { label: 'Direct booking network', value: 'Strong' },
+    { label: 'Concierge & operations', value: 'Full team' },
+  ] as Array<{ label: string; value: string }>,
+  marketSnapshot: {
+    title: 'Market Index Snapshot (Compare View)',
+    comparisons: [
+      { label: 'ADR',       lrm: '$520', market: '$372'  },
+      { label: 'Occupancy', lrm: '68%',  market: '62.4%' },
+      { label: 'RevPAR',    lrm: '$354', market: '$232'  },
+    ],
+    ctaLabel: 'Open Full Dashboard',
+    ctaHref: '/market-data',
+  },
+  gatedCta: {
+    title: 'Gated Market Report',
+    body: 'Access institutional-grade San Miguel luxury rental signals.',
+    ctaLabel: 'Request access',
+    ctaHref: '/contact',
+  },
+};
+
+export type HomepageMarketSnapshot = {
+  title: string;
+  comparisons: Array<{ label: string; lrm: string; market: string }>;
+  ctaLabel: string;
+  ctaHref: string;
+};
+
+export type HomepageGatedCta = {
+  title: string;
+  body: string;
+  ctaLabel: string;
+  ctaHref: string;
+};
+
+export type HomepageContent = {
+  hero: { headline: string; subheadline: string };
+  metrics: Array<{ label: string; value: string }>;
+  marketSnapshot: HomepageMarketSnapshot;
+  gatedCta: HomepageGatedCta;
+  usingMock: boolean;
+};
+
+export async function getHomepageContent(): Promise<HomepageContent> {
+  if (!hasEnv()) {
+    return { ...DEFAULT_HOMEPAGE, usingMock: true };
+  }
+
+  const supabase = getSupabaseServerClient();
+  const { data } = await supabase
+    .from('site_content')
+    .select('key,value')
+    .in('key', ['homepage_hero', 'homepage_metrics', 'homepage_market_snapshot', 'homepage_gated_cta']);
+
+  // value is stored as Json; the CMS keeps arbitrary editor-shaped objects so
   // we narrow at the boundary instead of polluting the schema with view-models.
-  const hero=(data?.find(d=>d.key==='homepage_hero')?.value as { headline?: string; subheadline?: string } | undefined) || {};
-  const metricsValue=data?.find(d=>d.key==='homepage_metrics')?.value as { items?: unknown[] } | undefined;
-  const metrics=metricsValue?.items || [];
-  return {hero:{headline:hero.headline||'',subheadline:hero.subheadline||''},metrics,usingMock:false};
+  const byKey = (k: string) => data?.find(d => d.key === k)?.value;
+
+  const heroRaw = byKey('homepage_hero') as { headline?: string; subheadline?: string } | undefined;
+  const metricsRaw = byKey('homepage_metrics') as { items?: Array<{ label: string; value: string }> } | undefined;
+  const snapshotRaw = byKey('homepage_market_snapshot') as Partial<HomepageMarketSnapshot> | undefined;
+  const gatedRaw = byKey('homepage_gated_cta') as Partial<HomepageGatedCta> | undefined;
+
+  return {
+    hero: {
+      headline: heroRaw?.headline || DEFAULT_HOMEPAGE.hero.headline,
+      subheadline: heroRaw?.subheadline || DEFAULT_HOMEPAGE.hero.subheadline,
+    },
+    metrics: metricsRaw?.items?.length ? metricsRaw.items : [...DEFAULT_HOMEPAGE.metrics],
+    marketSnapshot: {
+      title: snapshotRaw?.title || DEFAULT_HOMEPAGE.marketSnapshot.title,
+      comparisons: snapshotRaw?.comparisons?.length
+        ? snapshotRaw.comparisons
+        : [...DEFAULT_HOMEPAGE.marketSnapshot.comparisons],
+      ctaLabel: snapshotRaw?.ctaLabel || DEFAULT_HOMEPAGE.marketSnapshot.ctaLabel,
+      ctaHref: snapshotRaw?.ctaHref || DEFAULT_HOMEPAGE.marketSnapshot.ctaHref,
+    },
+    gatedCta: {
+      title: gatedRaw?.title || DEFAULT_HOMEPAGE.gatedCta.title,
+      body: gatedRaw?.body || DEFAULT_HOMEPAGE.gatedCta.body,
+      ctaLabel: gatedRaw?.ctaLabel || DEFAULT_HOMEPAGE.gatedCta.ctaLabel,
+      ctaHref: gatedRaw?.ctaHref || DEFAULT_HOMEPAGE.gatedCta.ctaHref,
+    },
+    usingMock: false,
+  };
 }
 
 // Global property image fallback used by every property card / memo when the
@@ -36,9 +124,13 @@ export async function getDefaultPropertyImage(): Promise<string> {
 }
 
 function rowToProperty(r: any, fallbackImage: string) {
-  const dbImages = Array.isArray(r.images) ? r.images.filter((x: unknown): x is string => typeof x === 'string' && x.trim().length > 0) : [];
+  const dbImages = Array.isArray(r.images)
+    ? r.images.filter((x: unknown): x is string => typeof x === 'string' && x.trim().length > 0)
+    : [];
   const heroImage = typeof r.hero_image === 'string' && r.hero_image.trim() ? r.hero_image : null;
-  const images = (heroImage ? [heroImage, ...dbImages.filter((u: string) => u !== heroImage)] : dbImages);
+  const images = heroImage
+    ? [heroImage, ...dbImages.filter((u: string) => u !== heroImage)]
+    : dbImages;
   return {
     slug: r.slug,
     name: r.name,
@@ -59,13 +151,13 @@ function rowToProperty(r: any, fallbackImage: string) {
     sqm: typeof r.sqm === 'number' ? r.sqm : undefined,
     rooftop: typeof r.rooftop === 'boolean' ? r.rooftop : undefined,
     accent2: typeof r.accent2 === 'string' && r.accent2 ? r.accent2 : undefined,
-    style: (r.style === 'colonial' || r.style === 'hacienda' || r.style === 'villa') ? r.style : undefined,
+    style: r.style === 'colonial' || r.style === 'hacienda' || r.style === 'villa' ? r.style : undefined,
     heroImage: heroImage || undefined,
   };
 }
 
-export async function getPublishedProperties(){
-  if(!hasEnv()) return fallbackProperties;
+export async function getPublishedProperties() {
+  if (!hasEnv()) return fallbackProperties;
   const supabase = getSupabaseServerClient();
   const [{ data }, fallbackImage] = await Promise.all([
     supabase.from('properties').select('*').eq('status', 'published'),
@@ -75,19 +167,23 @@ export async function getPublishedProperties(){
   return data.map(r => rowToProperty(r, fallbackImage));
 }
 
-export async function getPublishedArticles(){
-  if(!hasEnv()) return [];
-  const supabase=getSupabaseServerClient();
-  const {data}=await supabase.from('articles').select('*').eq('published',true);
+export async function getPublishedArticles() {
+  if (!hasEnv()) return [];
+  const supabase = getSupabaseServerClient();
+  const { data } = await supabase.from('articles').select('*').eq('published', true);
   return data ?? [];
 }
-
 
 export async function getPropertyBySlug(slug: string) {
   if (!hasEnv()) return fallbackProperties.find(p => p.slug === slug) ?? null;
   const supabase = getSupabaseServerClient();
   const [{ data }, fallbackImage] = await Promise.all([
-    supabase.from('properties').select('*').eq('slug', slug).eq('status', 'published').maybeSingle(),
+    supabase
+      .from('properties')
+      .select('*')
+      .eq('slug', slug)
+      .eq('status', 'published')
+      .maybeSingle(),
     getDefaultPropertyImage(),
   ]);
   if (!data) return fallbackProperties.find(p => p.slug === slug) ?? null;
@@ -239,6 +335,119 @@ const DEFAULT_ROI: RoiCalculatorContent = {
     sampleResult: 'Estimated ADR: $900–$1,450 · Occupancy: 60–70% · Annual Gross: $240K–$410K · Suggested positioning: Luxury · Next step: Request underwriting call.',
   },
 };
+
+// ============================================================
+// Legal page content (Disclosures + Terms of Use).
+// Each clause is shaped exactly like the design's source-of-truth array.
+// ============================================================
+
+export type LegalClause = {
+  n: string;          // "01", "02", ...
+  t: string;          // title
+  d: string;          // body paragraph
+  list?: string[];    // optional bulleted sub-items (e.g. limitation of liability)
+};
+
+export type LegalContent = {
+  disclosures: LegalClause[];
+  terms: LegalClause[];
+  lastUpdated: string;  // ISO date
+  docCode: string;      // "INV-LGL-2026-Q2"
+  version: string;      // "v1.0"
+};
+
+const DEFAULT_DISCLOSURES: LegalClause[] = [
+  { n: '01', t: 'Not a real estate brokerage',
+    d: 'InvestSMA is not a licensed real estate broker or agent. We do not represent buyers or sellers in real estate transactions. We may refer clients to licensed agents or collaborate with agents selected by the client, but we do not participate in brokerage activities or earn commissions from the sale of real estate unless explicitly disclosed.' },
+  { n: '02', t: 'No investment, legal, or tax advice',
+    d: 'All information provided by InvestSMA is for informational purposes only. Nothing on this website or in our communications should be interpreted as investment, legal, or tax advice. Investors are responsible for conducting their own due diligence and should consult with licensed professionals before making any investment decisions.' },
+  { n: '03', t: 'Performance and ROI projections',
+    d: 'Any financial projections, income estimates, or return assumptions are based on historical operating data, market trends, and internal analysis. These projections are not guarantees of future performance. Actual results may vary significantly due to market conditions, property-specific factors, regulatory changes, and other variables outside of our control.' },
+  { n: '04', t: 'Operational performance',
+    d: 'While Luxury Rental Management has a track record of strong performance across its portfolio, past performance is not indicative of future results. Individual property performance will depend on a variety of factors including location, design, pricing strategy, competition, and market demand.' },
+  { n: '05', t: 'Third-party relationships',
+    d: 'We may introduce clients to third-party service providers, including real estate agents, attorneys, designers, and contractors. These parties operate independently, and InvestSMA is not responsible for their actions, services, or outcomes.' },
+  { n: '06', t: 'No guarantees',
+    d: 'InvestSMA does not guarantee occupancy rates, rental income, property appreciation, or investment returns. All investments carry risk, and investors should be prepared for variability in performance.' },
+  { n: '07', t: 'Investor responsibility',
+    d: 'All investment decisions are made solely by the investor. By using this website or engaging with InvestSMA, you acknowledge that you are responsible for evaluating the risks and merits of any investment.' },
+];
+
+const DEFAULT_TERMS: LegalClause[] = [
+  { n: '01', t: 'Use of information',
+    d: 'The content on this website is provided for general informational purposes only. While InvestSMA aims to provide accurate and up-to-date information, we make no representations or warranties regarding the completeness, accuracy, or reliability of any content.' },
+  { n: '02', t: 'No reliance',
+    d: 'You agree not to rely solely on the information provided on this website when making investment decisions. Any reliance you place on such information is strictly at your own risk.' },
+  { n: '03', t: 'No advisory relationship',
+    d: 'Your use of this website or communication with InvestSMA does not create an advisory, fiduciary, or agency relationship. We do not act as your financial advisor, real estate broker, or legal representative.' },
+  { n: '04', t: 'Limitation of liability',
+    d: 'To the fullest extent permitted by law, InvestSMA and its affiliates shall not be liable for any direct, indirect, incidental, or consequential losses or damages arising from:',
+    list: [
+      'Use of or reliance on this website',
+      'Investment decisions made based on our content',
+      'Errors or omissions in information provided',
+      'Actions taken by third-party service providers',
+    ] },
+  { n: '05', t: 'Third-party links and services',
+    d: 'This website may contain links to third-party websites or references to third-party services. InvestSMA does not control or endorse these third parties and is not responsible for their content, services, or practices.' },
+  { n: '06', t: 'Intellectual property',
+    d: 'All content on this website, including text, branding, and materials, is the property of InvestSMA unless otherwise stated. You may not reproduce, distribute, or use this content without prior written permission.' },
+  { n: '07', t: 'Modifications',
+    d: 'InvestSMA reserves the right to update or modify these Terms of Use at any time without prior notice. Continued use of the website constitutes acceptance of any changes.' },
+  { n: '08', t: 'Governing law',
+    d: 'These Terms shall be governed by and interpreted in accordance with applicable laws, without regard to conflict of law principles.' },
+];
+
+const DEFAULT_LEGAL: LegalContent = {
+  disclosures: DEFAULT_DISCLOSURES,
+  terms: DEFAULT_TERMS,
+  lastUpdated: '2026-04-30',
+  docCode: 'INV-LGL-2026-Q2',
+  version: 'v1.0',
+};
+
+function coerceClauses(raw: unknown): LegalClause[] | null {
+  if (!Array.isArray(raw)) return null;
+  const out: LegalClause[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue;
+    const r = item as Record<string, unknown>;
+    if (typeof r.n !== 'string' || typeof r.t !== 'string' || typeof r.d !== 'string') continue;
+    const list = Array.isArray(r.list) ? r.list.filter((x): x is string => typeof x === 'string') : undefined;
+    out.push({ n: r.n, t: r.t, d: r.d, ...(list && list.length ? { list } : {}) });
+  }
+  return out.length ? out : null;
+}
+
+export async function getLegalContent(): Promise<LegalContent> {
+  if (!hasEnv()) return DEFAULT_LEGAL;
+  const supabase = getSupabaseServerClient();
+  const { data } = await supabase
+    .from('site_content')
+    .select('key,value,updated_at')
+    .in('key', ['legal_disclosures', 'legal_terms', 'legal_meta']);
+
+  const findValue = (k: string) =>
+    data?.find(d => d.key === k)?.value as Record<string, unknown> | undefined;
+
+  const disclosuresRaw = findValue('legal_disclosures');
+  const termsRaw = findValue('legal_terms');
+  const metaRaw = findValue('legal_meta');
+
+  const disclosures =
+    coerceClauses((disclosuresRaw as { items?: unknown })?.items) ?? DEFAULT_DISCLOSURES;
+  const terms =
+    coerceClauses((termsRaw as { items?: unknown })?.items) ?? DEFAULT_TERMS;
+
+  const lastUpdated =
+    typeof metaRaw?.lastUpdated === 'string' ? metaRaw.lastUpdated : DEFAULT_LEGAL.lastUpdated;
+  const docCode =
+    typeof metaRaw?.docCode === 'string' ? metaRaw.docCode : DEFAULT_LEGAL.docCode;
+  const version =
+    typeof metaRaw?.version === 'string' ? metaRaw.version : DEFAULT_LEGAL.version;
+
+  return { disclosures, terms, lastUpdated, docCode, version };
+}
 
 export async function getRoiCalculatorContent(): Promise<RoiCalculatorContent> {
   if (!hasEnv()) return DEFAULT_ROI;

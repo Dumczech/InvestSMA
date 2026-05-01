@@ -1,3 +1,29 @@
-'use client';
-import { useState } from 'react';
-export default function Page(){const [msg,setMsg]=useState(''); const save=async()=>{const payload={slug:'sample-article',title:'Sample Market Insight',category:'Market reports',excerpt:'Short summary',body:'Long-form content',published:true}; const r=await fetch('/api/admin/articles',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)}); setMsg(JSON.stringify(await r.json()));}; return <main className='mx-auto max-w-5xl p-6'><h1 className='text-2xl'>Articles CMS</h1><p className='text-white/70 mt-2'>Control insights/blog cards and publishing status.</p><button onClick={save} className='mt-4 rounded bg-gold px-3 py-2 text-black'>Upsert sample article</button><p className='mt-2 text-sm'>{msg}</p></main>}
+import { getSupabaseServerClient } from '@/lib/supabase/server';
+import ArticlesClient, { type ArticleRow } from './ArticlesClient';
+
+export const dynamic = 'force-dynamic';
+
+async function loadArticles(): Promise<ArticleRow[]> {
+  try {
+    const s = getSupabaseServerClient();
+    const { data, error } = await s.from('articles').select('*').order('created_at', { ascending: false });
+    if (error) throw error;
+    return (data ?? []) as ArticleRow[];
+  } catch {
+    return [];
+  }
+}
+
+export default async function Page() {
+  const rows = await loadArticles();
+  return (
+    <main className='mx-auto max-w-6xl p-6'>
+      <h1 className='text-2xl'>Articles CMS</h1>
+      <p className='mt-2 text-white/70'>
+        Manage the cards on <code className='text-sand'>/insights</code>. Toggle <strong>Published</strong>{' '}
+        to show/hide each article on the public site.
+      </p>
+      <ArticlesClient initialRows={rows} />
+    </main>
+  );
+}

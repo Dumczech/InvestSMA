@@ -1,3 +1,37 @@
-'use client';
-import { useState } from 'react';
-export default function Page(){const [msg,setMsg]=useState(''); const save=async()=>{const r=await fetch('/api/admin/content',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({key:'homepage_hero',value:{headline:'Updated headline',subheadline:'Updated subheadline'}})}); setMsg(JSON.stringify(await r.json()));}; return <main className='mx-auto max-w-5xl p-6'><h1 className='text-2xl'>Content CMS</h1><p className='text-white/70 mt-2'>Control homepage hero text and global content blocks.</p><button onClick={save} className='mt-4 rounded bg-gold px-3 py-2 text-black'>Save sample hero text</button><p className='mt-2 text-sm'>{msg}</p></main>}
+import { getSupabaseServerClient } from '@/lib/supabase/server';
+import ContentCmsClient from './ContentCmsClient';
+
+// Server component: pull every site_content row, hand to the client editor.
+// `force-dynamic` so admin always sees the latest, never cached.
+export const dynamic = 'force-dynamic';
+
+type Row = { key: string; value: unknown; status: string; updated_at: string };
+
+async function loadRows(): Promise<Row[]> {
+  try {
+    const s = getSupabaseServerClient();
+    const { data, error } = await s
+      .from('site_content')
+      .select('key,value,status,updated_at')
+      .order('key');
+    if (error) throw error;
+    return (data ?? []) as Row[];
+  } catch {
+    return [];
+  }
+}
+
+export default async function Page() {
+  const rows = await loadRows();
+  return (
+    <main className='mx-auto max-w-5xl p-6'>
+      <h1 className='text-2xl'>Content CMS</h1>
+      <p className='mt-2 text-white/70'>
+        Edit homepage hero, metrics, market snapshot, and any other site content blocks.
+        Each row is a JSON value keyed by name; the public site reads these via{' '}
+        <code className='text-sand'>getHomepageContent()</code>.
+      </p>
+      <ContentCmsClient initialRows={rows} />
+    </main>
+  );
+}
