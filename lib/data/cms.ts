@@ -7,8 +7,11 @@ export async function getHomepageContent(){
   if(!hasEnv()) return {hero:{headline:'Invest in San Miguel de Allende’s Most Desirable Luxury Rental Market',subheadline:'Access real rental performance data, curated acquisition opportunities, and turnkey management from one of San Miguel’s leading luxury rental operators.'},metrics:[{label:'Luxury units managed',value:'45+'},{label:'Guest database',value:'10,000+'},{label:'Direct booking network',value:'Strong'},{label:'Concierge & operations',value:'Full team'}],usingMock:true};
   const supabase=getSupabaseServerClient();
   const {data}=await supabase.from('site_content').select('key,value').in('key',['homepage_hero','homepage_metrics']);
-  const hero=(data?.find((d:any)=>d.key==='homepage_hero')?.value) || {};
-  const metrics=(data?.find((d:any)=>d.key==='homepage_metrics')?.value?.items) || [];
+  // value is typed as Json; the CMS stores arbitrary editor-shaped objects so
+  // we narrow at the boundary instead of polluting the schema with view-models.
+  const hero=(data?.find(d=>d.key==='homepage_hero')?.value as { headline?: string; subheadline?: string } | undefined) || {};
+  const metricsValue=data?.find(d=>d.key==='homepage_metrics')?.value as { items?: unknown[] } | undefined;
+  const metrics=metricsValue?.items || [];
   return {hero:{headline:hero.headline||'',subheadline:hero.subheadline||''},metrics,usingMock:false};
 }
 
