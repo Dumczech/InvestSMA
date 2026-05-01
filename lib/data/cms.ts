@@ -104,12 +104,34 @@ export async function getHomepageContent(): Promise<HomepageContent> {
   };
 }
 
-export async function getPublishedProperties() {
-  if (!hasEnv()) return fallbackProperties;
+// Global property image fallback used by every property card / memo when the
+// row's `images` array is empty. Stored in site_content so admins can swap a
+// single URL and update every fallback site-wide. Defaults to a stable
+// Unsplash photo so the page never renders an empty box.
+const DEFAULT_PROPERTY_IMAGE_FALLBACK =
+  'https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=1600&h=1000&fit=crop&q=80';
+
+export async function getDefaultPropertyImage(): Promise<string> {
+  if (!hasEnv()) return DEFAULT_PROPERTY_IMAGE_FALLBACK;
   const supabase = getSupabaseServerClient();
-  const { data } = await supabase.from('properties').select('*').eq('status', 'published');
-  if (!data?.length) return fallbackProperties;
-  return data.map((r: any) => ({
+  const { data } = await supabase
+    .from('site_content')
+    .select('value')
+    .eq('key', 'default_property_image')
+    .maybeSingle();
+  const url = (data?.value as { url?: string } | null)?.url;
+  return typeof url === 'string' && url.trim() ? url : DEFAULT_PROPERTY_IMAGE_FALLBACK;
+}
+
+function rowToProperty(r: any, fallbackImage: string) {
+  const dbImages = Array.isArray(r.images)
+    ? r.images.filter((x: unknown): x is string => typeof x === 'string' && x.trim().length > 0)
+    : [];
+  const heroImage = typeof r.hero_image === 'string' && r.hero_image.trim() ? r.hero_image : null;
+  const images = heroImage
+    ? [heroImage, ...dbImages.filter((u: string) => u !== heroImage)]
+    : dbImages;
+  return {
     slug: r.slug,
     name: r.name,
     neighborhood: r.neighborhood,
@@ -117,14 +139,32 @@ export async function getPublishedProperties() {
     bedrooms: r.bedrooms || 0,
     adr: `$${r.adr_low || 0}–$${r.adr_high || 0}`,
     annualGross: `$${r.annual_gross_low || 0}–$${r.annual_gross_high || 0}`,
-    upgradePotential: 'Operational optimization',
-    thesis: 'Data-backed opportunity',
-    occupancy: 'TBD',
-    strategy: 'LRM strategy',
-    seasonality: 'Seasonality upside',
-    risks: ['Pending'],
-    images: ['/hero1.jpg'],
-  }));
+    upgradePotential: r.upgrade_potential || 'Operational optimization',
+    thesis: r.investment_thesis || 'Data-backed opportunity',
+    occupancy: r.occupancy_assumption || 'TBD',
+    strategy: r.strategy || 'LRM strategy',
+    seasonality: r.seasonality || 'Seasonality upside',
+    risks: Array.isArray(r.risks) ? r.risks : ['Pending'],
+    images: images.length ? images : [fallbackImage],
+    score: typeof r.score === 'number' ? r.score : undefined,
+    baths: typeof r.baths === 'number' ? r.baths : undefined,
+    sqm: typeof r.sqm === 'number' ? r.sqm : undefined,
+    rooftop: typeof r.rooftop === 'boolean' ? r.rooftop : undefined,
+    accent2: typeof r.accent2 === 'string' && r.accent2 ? r.accent2 : undefined,
+    style: r.style === 'colonial' || r.style === 'hacienda' || r.style === 'villa' ? r.style : undefined,
+    heroImage: heroImage || undefined,
+  };
+}
+
+export async function getPublishedProperties() {
+  if (!hasEnv()) return fallbackProperties;
+  const supabase = getSupabaseServerClient();
+  const [{ data }, fallbackImage] = await Promise.all([
+    supabase.from('properties').select('*').eq('status', 'published'),
+    getDefaultPropertyImage(),
+  ]);
+  if (!data?.length) return fallbackProperties;
+  return data.map(r => rowToProperty(r, fallbackImage));
 }
 
 export async function getPublishedArticles() {
@@ -137,29 +177,17 @@ export async function getPublishedArticles() {
 export async function getPropertyBySlug(slug: string) {
   if (!hasEnv()) return fallbackProperties.find(p => p.slug === slug) ?? null;
   const supabase = getSupabaseServerClient();
-  const { data } = await supabase
-    .from('properties')
-    .select('*')
-    .eq('slug', slug)
-    .eq('status', 'published')
-    .maybeSingle();
+  const [{ data }, fallbackImage] = await Promise.all([
+    supabase
+      .from('properties')
+      .select('*')
+      .eq('slug', slug)
+      .eq('status', 'published')
+      .maybeSingle(),
+    getDefaultPropertyImage(),
+  ]);
   if (!data) return fallbackProperties.find(p => p.slug === slug) ?? null;
-  return {
-    slug: data.slug,
-    name: data.name,
-    neighborhood: data.neighborhood,
-    price: data.price_usd ? `$${Number(data.price_usd).toLocaleString()}` : 'TBD',
-    bedrooms: data.bedrooms || 0,
-    adr: `$${data.adr_low || 0}–$${data.adr_high || 0}`,
-    annualGross: `$${data.annual_gross_low || 0}–$${data.annual_gross_high || 0}`,
-    upgradePotential: data.upgrade_potential || 'Operational optimization',
-    thesis: data.investment_thesis || 'Data-backed opportunity',
-    occupancy: data.occupancy_assumption || 'TBD',
-    strategy: data.strategy || 'LRM strategy',
-    seasonality: data.seasonality || 'Seasonality upside',
-    risks: Array.isArray(data.risks) ? data.risks : ['Pending'],
-    images: Array.isArray(data.images) && data.images.length ? data.images : ['/hero1.jpg'],
-  };
+  return rowToProperty(data, fallbackImage);
 }
 
 // ============================================================

@@ -60,6 +60,14 @@ type PropertiesRow = {
   risks: Json | null;
   images: Json | null;
   status: string;
+  // Design-bundle additions (20260501_property_design_columns.sql).
+  score: number | null;
+  baths: number | null;
+  sqm: number | null;
+  rooftop: boolean;
+  accent2: string | null;
+  style: 'colonial' | 'hacienda' | 'villa' | null;
+  hero_image: string | null;
 };
 
 type MarketReportsRow = {
