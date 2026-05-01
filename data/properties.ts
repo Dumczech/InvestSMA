@@ -1,8 +1,123 @@
 import { Property } from '@/types/property';
+
+// Empty-database fallback. When Supabase is configured but properties table
+// is empty, getPublishedProperties() returns this list verbatim. URLs point
+// to stable Unsplash photos so the page never renders empty placeholders.
+// To customize per-deployment, run the migration and edit rows in
+// /admin/property-cms — admin edits take precedence.
+
+const photo = (id: string, w = 1600, h = 1000) =>
+  `https://images.unsplash.com/photo-${id}?w=${w}&h=${h}&fit=crop&q=80`;
+
 export const properties: Property[] = [
-{slug:'casa-centro-grande',name:'Casa Centro Grande',neighborhood:'Centro',price:'$2.4M',bedrooms:9,adr:'$1,200–$2,000',annualGross:'$325K–$525K',upgradePotential:'Suite refresh + rooftop events',thesis:'Rare scale in walkable core drives group demand and premium stays.',occupancy:'61%–72%',strategy:'Position as flagship luxury group villa with direct-booking funnel.',seasonality:'Holiday and wedding compression adds outsized ADR potential.',risks:['Historic-core permitting constraints','Capex timing for luxury finishes'],images:['/hero1.jpg']},
-{slug:'casa-vista-luxury',name:'Casa Vista Luxury',neighborhood:'Atascadero',price:'$1.8M',bedrooms:6,adr:'$900–$1,500',annualGross:'$250K–$400K',upgradePotential:'Pool + wellness terrace',thesis:'View-driven inventory with differentiated design appeals to long weekend demand.',occupancy:'58%–68%',strategy:'Blend premium OTA and direct repeat campaigns.',seasonality:'Peak winter and festival periods support stepped pricing.',risks:['Slope access may limit some guest segments'],images:['/hero2.jpg']},
-{slug:'boutique-hotel-conversion',name:'Boutique Hotel Conversion',neighborhood:'Centro',price:'$5.2M',bedrooms:12,adr:'$2,500–$4,000',annualGross:'$900K–$1.4M',upgradePotential:'F&B activation + event program',thesis:'Institutional-style cash flow profile with group/event monetization upside.',occupancy:'54%–66%',strategy:'Operate as branded buyout-ready asset with concierge stack.',seasonality:'Strongest uplift during weddings, holidays, and cultural events.',risks:['Execution complexity','Higher staffing overhead'],images:['/hero3.jpg']},
-{slug:'design-villa',name:'Design Villa',neighborhood:'Guadiana',price:'$1.3M',bedrooms:5,adr:'$700–$1,150',annualGross:'$190K–$310K',upgradePotential:'Smart-home + design package',thesis:'Design-led asset in desirable residential pocket balances lifestyle and income.',occupancy:'57%–70%',strategy:'Target affluent family and small-group cohorts.',seasonality:'Shoulder seasons can be lifted via content and direct channels.',risks:['Competitive mid-size inventory'],images:['/hero4.jpg']}
+  {
+    slug: 'casa-centro-grande',
+    name: 'Casa Centro Grande',
+    neighborhood: 'Centro',
+    price: '$2.4M',
+    bedrooms: 9,
+    baths: 8,
+    sqm: 720,
+    rooftop: true,
+    score: 88,
+    style: 'colonial',
+    accent2: '#D9CFB8',
+    adr: '$1,200–$2,000',
+    annualGross: '$325K–$525K',
+    upgradePotential: 'Suite refresh + rooftop events',
+    thesis: 'Rare scale in walkable core drives group demand and premium stays.',
+    occupancy: '61%–72%',
+    strategy: 'Position as flagship luxury group villa with direct-booking funnel.',
+    seasonality: 'Holiday and wedding compression adds outsized ADR potential.',
+    risks: ['Historic-core permitting constraints', 'Capex timing for luxury finishes'],
+    images: [
+      photo('1518780664697-55e3ad937233'),
+      photo('1582719478250-c89cae4dc85b'),
+      photo('1586023492125-27b2c045efd7'),
+    ],
+    heroImage: photo('1518780664697-55e3ad937233'),
+  },
+  {
+    slug: 'casa-vista-luxury',
+    name: 'Casa Vista Luxury',
+    neighborhood: 'Atascadero',
+    price: '$1.8M',
+    bedrooms: 6,
+    baths: 6,
+    sqm: 540,
+    rooftop: true,
+    score: 84,
+    style: 'hacienda',
+    accent2: '#1F3A2E',
+    adr: '$900–$1,500',
+    annualGross: '$250K–$400K',
+    upgradePotential: 'Pool + wellness terrace',
+    thesis: 'View-driven inventory with differentiated design appeals to long weekend demand.',
+    occupancy: '58%–68%',
+    strategy: 'Blend premium OTA and direct repeat campaigns.',
+    seasonality: 'Peak winter and festival periods support stepped pricing.',
+    risks: ['Slope access may limit some guest segments'],
+    images: [
+      photo('1613490493576-7fde63acd811'),
+      photo('1564540586988-aa4e53c3d799'),
+      photo('1580587771525-78b9dba3b914'),
+    ],
+    heroImage: photo('1613490493576-7fde63acd811'),
+  },
+  {
+    slug: 'boutique-hotel-conversion',
+    name: 'Boutique Hotel Conversion',
+    neighborhood: 'Centro',
+    price: '$5.2M',
+    bedrooms: 12,
+    baths: 12,
+    sqm: 1100,
+    rooftop: true,
+    score: 92,
+    style: 'colonial',
+    accent2: '#ECE3CD',
+    adr: '$2,500–$4,000',
+    annualGross: '$900K–$1.4M',
+    upgradePotential: 'F&B activation + event program',
+    thesis: 'Institutional-style cash flow profile with group/event monetization upside.',
+    occupancy: '54%–66%',
+    strategy: 'Operate as branded buyout-ready asset with concierge stack.',
+    seasonality: 'Strongest uplift during weddings, holidays, and cultural events.',
+    risks: ['Execution complexity', 'Higher staffing overhead'],
+    images: [
+      photo('1564013799919-ab600027ffc6'),
+      photo('1600585154340-be6161a56a0c'),
+      photo('1571055107559-3e67626fa8be'),
+    ],
+    heroImage: photo('1564013799919-ab600027ffc6'),
+  },
+  {
+    slug: 'design-villa',
+    name: 'Design Villa',
+    neighborhood: 'Guadiana',
+    price: '$1.3M',
+    bedrooms: 5,
+    baths: 5,
+    sqm: 410,
+    rooftop: false,
+    score: 79,
+    style: 'villa',
+    accent2: '#C9A55A',
+    adr: '$700–$1,150',
+    annualGross: '$190K–$310K',
+    upgradePotential: 'Smart-home + design package',
+    thesis: 'Design-led asset in desirable residential pocket balances lifestyle and income.',
+    occupancy: '57%–70%',
+    strategy: 'Target affluent family and small-group cohorts.',
+    seasonality: 'Shoulder seasons can be lifted via content and direct channels.',
+    risks: ['Competitive mid-size inventory'],
+    images: [
+      photo('1512917774080-9991f1c4c750'),
+      photo('1564507592333-c60657eea523'),
+      photo('1574482620811-1aa16ffe3c82'),
+    ],
+    heroImage: photo('1512917774080-9991f1c4c750'),
+  },
 ];
-export const getProperty=(slug:string)=>properties.find(p=>p.slug===slug);
+
+export const getProperty = (slug: string) => properties.find(p => p.slug === slug);
