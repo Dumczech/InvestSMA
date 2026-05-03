@@ -99,6 +99,16 @@ type ArticlesRow = {
   excerpt: string | null;
   body: string | null;
   published: boolean;
+  // Design-bundle additions for the post detail page
+  // (20260503_article_post_columns.sql).
+  deck: string | null;
+  author: string | null;
+  author_role: string | null;
+  read_minutes: number | null;
+  accent: string | null;
+  body_json: Json | null;
+  related: Json | null;
+  published_at: string | null;
 };
 
 type SiteContentRow = {
