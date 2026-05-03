@@ -1,29 +1,31 @@
-import { SectionHeader } from '@/components/site';
-import MarketDashboard from '@/components/market/dashboard';
 import { Metadata } from 'next';
 import { getPublishedMarketData } from '@/lib/data/marketData';
 import { getMarketHeadlineMetrics } from '@/lib/data/cms';
+import { Disclaimer, StickyCTA } from '@/components/site';
+import MarketClient from './MarketClient';
 
 export const metadata: Metadata = {
-  title: 'Market Data Dashboard | InvestSMA',
-  description: 'Compare LRM portfolio performance against market benchmarks for San Miguel de Allende investment decisions.',
+  title: 'Market Data Dashboard · InvestSMA',
+  description:
+    'San Miguel de Allende rental market index — LRM portfolio (312 properties) benchmarked against the AirDNA market panel (2,847 listings). Updated weekly.',
 };
 
-export default async function Market() {
+export default async function MarketPage() {
   const [data, headlineMetrics] = await Promise.all([
     getPublishedMarketData(),
     getMarketHeadlineMetrics(),
   ]);
   return (
-    <main className='mx-auto max-w-6xl p-6'>
-      <SectionHeader title='Market Data Dashboard' subtitle='Default view: Compare (LRM Portfolio vs Market Average).' />
-      <MarketDashboard
+    <div className='doc-page' data-screen-label='Market'>
+      <MarketClient
         monthly={data.monthly}
         bedroom={data.bedroom}
         neighborhood={data.neighborhood}
         headlineMetrics={headlineMetrics}
         usingMock={data.usingMock}
       />
-    </main>
+      <Disclaimer />
+      <StickyCTA label='Get the Q1 report' cta='Free Access' href='/contact' />
+    </div>
   );
 }

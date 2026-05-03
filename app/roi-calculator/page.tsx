@@ -1,13 +1,19 @@
 import type { Metadata } from 'next';
 import ROIClient from './ROIClient';
-import { getRoiCalculatorContent } from '@/lib/data/cms';
+import { Disclaimer, StickyCTA } from '@/components/site';
 
 export const metadata: Metadata = {
-  title: 'ROI Calculator | InvestSMA',
-  description: 'Estimate ADR, occupancy, and annual gross for San Miguel de Allende income-producing property investments.',
+  title: 'ROI Calculator · InvestSMA',
+  description:
+    'Underwrite an SMA rental property in 90 seconds. Real ADR, occupancy, and seasonality data applied to your budget.',
 };
 
-export default async function Page() {
-  const content = await getRoiCalculatorContent();
-  return <ROIClient content={content} />;
+export default function Page() {
+  return (
+    <div className='doc-page' data-screen-label='ROI'>
+      <ROIClient />
+      <Disclaimer />
+      <StickyCTA label='Book a 15-min call' cta='Talk to LRM' href='/contact' />
+    </div>
+  );
 }
