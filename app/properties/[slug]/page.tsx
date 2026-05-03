@@ -2,6 +2,12 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getPropertyBySlug } from '@/lib/data/cms';
+import {
+  getMemoEditorial,
+  getMemoCopy,
+  type MemoEditorial,
+  type MemoCopy,
+} from '@/lib/data/editorial';
 import { Disclaimer, StickyCTA, PropertyArt } from '@/components/site';
 import type { Property } from '@/types/property';
 
@@ -34,20 +40,24 @@ export default async function MemoPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const p = await getPropertyBySlug(slug);
+  const [p, memo, copy] = await Promise.all([
+    getPropertyBySlug(slug),
+    getMemoEditorial(),
+    getMemoCopy(),
+  ]);
   if (!p) notFound();
 
   return (
     <div className='doc-page' data-screen-label='Memo'>
-      <MemoHero p={p} />
-      <Thesis p={p} />
-      <Revenue p={p} />
-      <Seasonal />
-      <Upgrades p={p} />
-      <ManagementStrategy />
-      <Risks />
-      <Comps p={p} />
-      <MemoCTA p={p} />
+      <MemoHero p={p} copy={copy} />
+      <Thesis p={p} thesis={memo.thesis} copy={copy} />
+      <Revenue p={p} memo={memo} copy={copy} />
+      <Seasonal events={memo.seasonal_events} copy={copy} />
+      <Upgrades p={p} upgrades={memo.upgrades} copy={copy} />
+      <ManagementStrategy management={memo.management} stats={memo.management_stats} copy={copy} />
+      <Risks risks={memo.risks} copy={copy} />
+      <Comps p={p} copy={copy} />
+      <MemoCTA p={p} copy={copy} />
       <Disclaimer />
       <StickyCTA
         label={`Underwriting · ${p.name}`}
@@ -62,7 +72,7 @@ export default async function MemoPage({
 // Hero
 // ===========================================================================
 
-function MemoHero({ p }: { p: Property }) {
+function MemoHero({ p, copy }: { p: Property; copy: MemoCopy }) {
   const priceUsd = p.priceUsd ?? 0;
   const grossLow = p.annualGrossLow ?? 0;
   const capRate = priceUsd ? (grossLow * 0.65) / priceUsd * 100 : 0;
@@ -92,8 +102,8 @@ function MemoHero({ p }: { p: Property }) {
             gap: 12,
           }}
         >
-          <Link href='/properties' style={{ color: '#C9A55A' }}>← All Properties</Link>
-          <span>Underwriting Package · By Request</span>
+          <Link href='/properties' style={{ color: '#C9A55A' }}>{copy.topbar_back_label}</Link>
+          <span>{copy.topbar_center_label}</span>
           <span>Sample · LRM-{memoCode}-26 · Q1 2026</span>
         </div>
 
@@ -161,7 +171,7 @@ function MemoHero({ p }: { p: Property }) {
               padding: 28,
             }}
           >
-            <div className='data-label' style={{ color: '#C9A55A' }}>Deal terms</div>
+            <div className='data-label' style={{ color: '#C9A55A' }}>{copy.deal_terms_eyebrow}</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginTop: 20 }}>
               <div>
                 <div className='data-label'>List price</div>
@@ -194,7 +204,7 @@ function MemoHero({ p }: { p: Property }) {
                 className='btn btn-gold'
                 style={{ width: '100%' }}
               >
-                Request full underwriting →
+                {copy.deal_cta_label}
               </Link>
               <div
                 className='mono'
@@ -206,7 +216,7 @@ function MemoHero({ p }: { p: Property }) {
                   letterSpacing: '0.08em',
                 }}
               >
-                RETURNS WITHIN 48 HRS · 12-PAGE PDF · NDA-PROTECTED
+                {copy.deal_cta_footnote}
               </div>
             </div>
           </div>
@@ -363,28 +373,21 @@ function Section({
 // Section 01 — Thesis
 // ===========================================================================
 
-function Thesis({ p }: { p: Property }) {
-  const adrHigh = p.adrHigh ?? 0;
-  const points = [
-    {
-      t: 'Location alpha',
-      d: `${p.neighborhood} commands ADR ${adrHigh > 600 ? '40%+' : '20–30%'} above SMA average. Walkable to Jardín, Parroquia, and the principal restaurant corridor.`,
-    },
-    {
-      t: 'Inventory scarcity',
-      d: 'Active inventory in this segment fell 4.2% YoY. Only 11 luxury 4BD+ properties traded in Q1 2026.',
-    },
-    {
-      t: 'Demand tailwind',
-      d: 'Wedding season + Día de Muertos + Christmas occupy 78% of November–March nights at premium ADR.',
-    },
-    {
-      t: 'Operator advantage',
-      d: 'LRM portfolio properties generate 18% higher RevPAR vs. owner-operated peers — verified across 312 units.',
-    },
-  ];
+function Thesis({
+  p,
+  thesis,
+  copy,
+}: {
+  p: Property;
+  thesis: MemoEditorial['thesis'];
+  copy: MemoCopy;
+}) {
+  const points = thesis.map(pt => ({
+    t: pt.t,
+    d: pt.d.replace(/\{neighborhood\}/g, p.neighborhood ?? 'This neighborhood'),
+  }));
   return (
-    <Section num='01' title='Investment thesis' subtitle='Four reasons we accepted this onto the platform.'>
+    <Section num='01' title={copy.thesis_title} subtitle={copy.thesis_subtitle}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 32 }} className='memo-grid-2'>
         {points.map((pt, i) => (
           <div key={i} style={{ paddingTop: 20, borderTop: '1px solid rgba(20,19,15,0.2)' }}>
@@ -402,23 +405,20 @@ function Thesis({ p }: { p: Property }) {
 // Section 02 — Revenue
 // ===========================================================================
 
-const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'] as const;
-const SEASONALITY = [88, 84, 76, 64, 48, 42, 56, 58, 54, 64, 78, 92];
-const ADR_FACTOR = [1.2, 1.15, 1.05, 0.92, 0.78, 0.72, 0.85, 0.85, 0.82, 0.95, 1.18, 1.35];
-
-function Revenue({ p }: { p: Property }) {
+function Revenue({ p, memo, copy }: { p: Property; memo: MemoEditorial; copy: MemoCopy }) {
   const adrLow = p.adrLow ?? 0;
   const adrHigh = p.adrHigh ?? 0;
   const grossLow = p.annualGrossLow ?? 0;
   const grossHigh = p.annualGrossHigh ?? 0;
   const occ = p.occupancyPercent ?? 65;
   const baseADR = adrLow && adrHigh ? (adrLow + adrHigh) / 2 : adrLow || adrHigh || 0;
+  const ADR_FACTOR = memo.adr_factor;
 
   return (
     <Section
       num='02'
-      title='Revenue assumptions'
-      subtitle='Underwritten at base case. Bull and bear scenarios in full model.'
+      title={copy.revenue_title}
+      subtitle={copy.revenue_subtitle}
     >
       <div
         style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 40 }}
@@ -467,20 +467,31 @@ function Revenue({ p }: { p: Property }) {
             </div>
           </div>
         </div>
-        <RevenueChart baseADR={baseADR} occ={occ} />
+        <RevenueChart baseADR={baseADR} occ={occ} memo={memo} />
       </div>
     </Section>
   );
 }
 
-function RevenueChart({ baseADR, occ }: { baseADR: number; occ: number }) {
+function RevenueChart({
+  baseADR,
+  occ,
+  memo,
+}: {
+  baseADR: number;
+  occ: number;
+  memo: MemoEditorial;
+}) {
+  const MONTHS = memo.monthly_labels;
+  const SEASONALITY = memo.seasonality;
+  const ADR_FACTOR = memo.adr_factor;
   const w = 1100;
   const h = 280;
   const pad = 50;
   const bw = (w - pad * 2) / MONTHS.length;
   const monthlyRev = MONTHS.map((_, i) => {
-    const adr = baseADR * ADR_FACTOR[i];
-    const o = (SEASONALITY[i] / 100) * (occ / 65);
+    const adr = baseADR * (ADR_FACTOR[i] ?? 1);
+    const o = ((SEASONALITY[i] ?? 60) / 100) * (occ / 65);
     return adr * 30 * o;
   });
   const max = Math.max(...monthlyRev) * 1.1 || 1;
@@ -576,18 +587,18 @@ function DataCard({
 // Section 03 — Seasonal
 // ===========================================================================
 
-function Seasonal() {
-  const events = [
-    { period: 'Día de Muertos', date: 'Oct 28 – Nov 4', adr: '$680', occ: '92%', notes: 'Books 6mo out' },
-    { period: 'Christmas / NYE', date: 'Dec 18 – Jan 4', adr: '$820', occ: '96%', notes: 'Multi-week stays' },
-    { period: 'Wedding peak', date: 'Feb – Apr weekends', adr: '$640', occ: '88%', notes: 'Full-property buyouts' },
-    { period: 'Independence Day', date: 'Sep 13 – 17', adr: '$480', occ: '85%', notes: 'Domestic demand' },
-  ];
+function Seasonal({
+  events,
+  copy,
+}: {
+  events: MemoEditorial['seasonal_events'];
+  copy: MemoCopy;
+}) {
   return (
     <Section
       num='03'
-      title='Seasonal revenue opportunity'
-      subtitle='Four windows where SMA ADR routinely exceeds $600 and occupancy clears 85%.'
+      title={copy.seasonal_title}
+      subtitle={copy.seasonal_subtitle}
     >
       <div style={{ overflow: 'hidden', border: '1px solid rgba(20,19,15,0.15)' }}>
         <div
@@ -603,11 +614,9 @@ function Seasonal() {
             textTransform: 'uppercase',
           }}
         >
-          <span>Window</span>
-          <span>Dates</span>
-          <span>Peak ADR</span>
-          <span>Occupancy</span>
-          <span>Notes</span>
+          {copy.seasonal_cols.map((c, i) => (
+            <span key={i}>{c}</span>
+          ))}
         </div>
         {events.map((e, i) => (
           <div
@@ -637,18 +646,20 @@ function Seasonal() {
 // Section 04 — Upgrades
 // ===========================================================================
 
-function Upgrades({ p }: { p: Property }) {
-  const upgrades = [
-    { item: 'Rooftop terrace expansion + plunge pool', cost: 65000, lift: '+$48 ADR', payback: '2.1 yr' },
-    { item: 'Primary suite refresh + linens', cost: 22000, lift: '+$22 ADR', payback: '1.4 yr' },
-    { item: 'Outdoor kitchen / fire pit', cost: 28000, lift: '+$18 ADR', payback: '2.2 yr' },
-    { item: 'Pro photography + LRM staging', cost: 8000, lift: '+8% occ', payback: '0.6 yr' },
-  ];
+function Upgrades({
+  p,
+  upgrades,
+  copy,
+}: {
+  p: Property;
+  upgrades: MemoEditorial['upgrades'];
+  copy: MemoCopy;
+}) {
   const total = upgrades.reduce((s, u) => s + u.cost, 0);
   return (
     <Section
       num='04'
-      title='Recommended upgrades'
+      title={copy.upgrades_title}
       subtitle={`${p.upgradePotential}. Total upgrade budget — $${(total / 1000).toFixed(0)}K — recoverable in 1.8 years on base case.`}
     >
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 32 }} className='memo-upgrades-grid'>
@@ -675,18 +686,18 @@ function Upgrades({ p }: { p: Property }) {
           ))}
         </div>
         <div style={{ background: '#1F3A2E', color: '#F5EFE2', padding: 32 }}>
-          <div className='data-label' style={{ color: '#C9A55A' }}>Upgrade summary</div>
+          <div className='data-label' style={{ color: '#C9A55A' }}>{copy.upgrades_summary_label}</div>
           <div className='display tnum' style={{ fontSize: 56, marginTop: 16, lineHeight: 1 }}>
             ${(total / 1000).toFixed(0)}K
           </div>
-          <div style={{ fontSize: 13, opacity: 0.7, marginTop: 4 }}>Total recommended capex</div>
+          <div style={{ fontSize: 13, opacity: 0.7, marginTop: 4 }}>{copy.upgrades_summary_caption}</div>
           <div style={{ marginTop: 32, paddingTop: 20, borderTop: '1px solid rgba(245,239,226,0.15)' }}>
-            <div className='data-label' style={{ color: '#C9A55A' }}>ADR uplift (Y2)</div>
-            <div className='mono tnum' style={{ fontSize: 24, marginTop: 8, color: '#C9A55A' }}>+$88 / night</div>
+            <div className='data-label' style={{ color: '#C9A55A' }}>{copy.upgrades_lift_label}</div>
+            <div className='mono tnum' style={{ fontSize: 24, marginTop: 8, color: '#C9A55A' }}>{copy.upgrades_lift_value}</div>
           </div>
           <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid rgba(245,239,226,0.15)' }}>
-            <div className='data-label' style={{ color: '#C9A55A' }}>Blended payback</div>
-            <div className='mono tnum' style={{ fontSize: 24, marginTop: 8 }}>1.8 years</div>
+            <div className='data-label' style={{ color: '#C9A55A' }}>{copy.upgrades_payback_label}</div>
+            <div className='mono tnum' style={{ fontSize: 24, marginTop: 8 }}>{copy.upgrades_payback_value}</div>
           </div>
         </div>
       </div>
@@ -698,24 +709,21 @@ function Upgrades({ p }: { p: Property }) {
 // Section 05 — Management strategy (dark)
 // ===========================================================================
 
-function ManagementStrategy() {
-  const cols = [
-    { stage: 'Acquisition', items: ['Title clearance via Mexican notary', 'Fideicomiso setup (60 days)', 'Inventory + condition audit'] },
-    { stage: 'Stabilization', items: ['LRM design refresh (90 days)', 'Pro photo + 360° tour', 'OTA listings + direct site live'] },
-    { stage: 'Operations', items: ['24/7 guest concierge (bilingual)', 'Dynamic pricing — adjusted weekly', 'Quarterly owner reporting'] },
-    { stage: 'Optimization', items: ['Annual ADR & occupancy review', 'Upgrade ROI tracking', 'Tax-efficient distribution planning'] },
-  ];
-  const stats = [
-    { v: '22%', l: 'LRM mgmt fee' },
-    { v: '4–6 wks', l: 'To first guest' },
-    { v: '47', l: 'Active LRM properties' },
-    { v: '18%', l: 'RevPAR vs. owner-op' },
-  ];
+function ManagementStrategy({
+  management,
+  stats,
+  copy,
+}: {
+  management: MemoEditorial['management'];
+  stats: MemoEditorial['management_stats'];
+  copy: MemoCopy;
+}) {
+  const cols = management.map(m => ({ stage: m.phase, items: m.items }));
   return (
     <Section
       num='05'
-      title='LRM management strategy'
-      subtitle='The four-phase operator playbook applied to every property on the platform.'
+      title={copy.management_title}
+      subtitle={copy.management_subtitle}
       dark
     >
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }} className='memo-strategy-grid'>
@@ -774,18 +782,12 @@ function ManagementStrategy() {
 // Section 06 — Risks
 // ===========================================================================
 
-function Risks() {
-  const risks = [
-    { t: 'Regulatory', d: 'SMA municipality is reviewing short-term rental licensing. We model 6% annual licensing/registration cost as a contingency, even though current law does not require it.' },
-    { t: 'FX exposure', d: 'Owner P&L is reported in MXN. We hedge 50% of distributions via forward contracts; net peso volatility historically ±4% annualized on yields.' },
-    { t: 'Concentration', d: 'A material portion of demand originates from US/Canada. We model a 12% revenue haircut in a recession scenario but historical SMA performance has decoupled from US metro markets.' },
-    { t: 'Operator dependency', d: 'Property economics rely on LRM (or comparable) management. Owner-operator path is supported but reduces projected RevPAR by ~18%.' },
-  ];
+function Risks({ risks, copy }: { risks: MemoEditorial['risks']; copy: MemoCopy }) {
   return (
     <Section
       num='06'
-      title='Risks & considerations'
-      subtitle="What could go wrong, and how we've underwritten around it."
+      title={copy.risks_title}
+      subtitle={copy.risks_subtitle}
     >
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 32 }} className='memo-grid-2'>
         {risks.map((r, i) => (
@@ -806,7 +808,7 @@ function Risks() {
 // Section 07 — Comps
 // ===========================================================================
 
-function Comps({ p }: { p: Property }) {
+function Comps({ p, copy }: { p: Property; copy: MemoCopy }) {
   const sqm = p.sqm ?? 380;
   const beds = p.bedrooms || 4;
   const priceUsd = p.priceUsd ?? 0;
@@ -824,8 +826,8 @@ function Comps({ p }: { p: Property }) {
   return (
     <Section
       num='07'
-      title='Comparable transactions'
-      subtitle='Five trades within 1 km, last 12 months. First three shown — full set with addresses, brokers, and seller motivation in the gated package.'
+      title={copy.comps_title}
+      subtitle={copy.comps_subtitle}
     >
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 32 }} className='memo-grid-4'>
         <DataCard label='Subject · $/m²' value={subjectPpm ? `$${subjectPpm.toLocaleString()}` : '—'} sub='List basis' />
@@ -918,11 +920,11 @@ function Comps({ p }: { p: Property }) {
         }}
       >
         <div>
-          <div className='data-label' style={{ color: '#8E6F2D' }}>Gated · 2 of 5 trades</div>
-          <div style={{ fontSize: 14, marginTop: 4 }}>Off-market trades disclosed in the full underwriting package.</div>
+          <div className='data-label' style={{ color: '#8E6F2D' }}>{copy.comps_gated_label}</div>
+          <div style={{ fontSize: 14, marginTop: 4 }}>{copy.comps_gated_caption}</div>
         </div>
         <Link href={`/contact?intent=underwriting&property=${p.slug}#comps`} className='btn btn-gold' style={{ flexShrink: 0 }}>
-          Unlock comp set →
+          {copy.comps_unlock_label}
         </Link>
       </div>
     </Section>
@@ -933,23 +935,9 @@ function Comps({ p }: { p: Property }) {
 // Final CTA
 // ===========================================================================
 
-function MemoCTA({ p }: { p: Property }) {
-  const shown = [
-    'Investment thesis (4-bullet summary)',
-    'Revenue range, occupancy, base-case Y2 gross',
-    'Seasonality curve (12-month chart)',
-    'Capex thesis + estimated upgrade budget',
-    '3 of 5 comparable trades',
-  ];
-  const gated = [
-    'Full Excel model · base / bull / bear with sensitivity',
-    'All 5 comps with addresses, brokers, seller motivation',
-    'Capex schedule with vendor quotes (line-item, not estimate)',
-    'Property condition report + structural assessment',
-    'Title search + ejido / fideicomiso review notes',
-    'Tax structure recommendation (US + MX)',
-    '30-min call with LRM acquisition lead',
-  ];
+function MemoCTA({ p, copy }: { p: Property; copy: MemoCopy }) {
+  const shown = copy.cta_shown;
+  const gated = copy.cta_gated;
 
   return (
     <section className='surface-dark' style={{ background: '#14130F', color: '#F5EFE2', padding: '120px 0' }}>
@@ -970,8 +958,8 @@ function MemoCTA({ p }: { p: Property }) {
             gap: 12,
           }}
         >
-          <span>§ Request the full underwriting package</span>
-          <span>Avg response · 36 hrs</span>
+          <span>{copy.cta_topbar_label}</span>
+          <span>{copy.cta_topbar_response}</span>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'start' }} className='memo-cta-grid'>
@@ -983,13 +971,11 @@ function MemoCTA({ p }: { p: Property }) {
                 margin: 0,
                 lineHeight: 0.96,
                 letterSpacing: '-0.025em',
+                whiteSpace: 'pre-line',
               }}
             >
-              You&apos;ve seen the
-              <br />
-              summary.
-              <br />
-              <span className='display-italic' style={{ color: '#C9A55A' }}>Now see the model.</span>
+              {copy.cta_headline_pre}
+              <span className='display-italic' style={{ color: '#C9A55A' }}>{copy.cta_headline_italic}</span>
             </h2>
             <p
               style={{
@@ -1000,9 +986,7 @@ function MemoCTA({ p }: { p: Property }) {
                 marginTop: 28,
               }}
             >
-              The page above is a teaser — sized for diligence, not for closing. The full package
-              goes line-by-line through assumptions, comps, capex, structure, and tax. We send it
-              within 48 hours after a 10-minute qualification call.
+              {copy.cta_paragraph}
             </p>
 
             <div
@@ -1013,11 +997,7 @@ function MemoCTA({ p }: { p: Property }) {
                 gap: 16,
               }}
             >
-              {[
-                { n: '01', t: 'Request', d: 'Form below · 2 min' },
-                { n: '02', t: 'Qualify', d: '10-min intro call' },
-                { n: '03', t: 'Receive', d: 'Full package · 48 hrs' },
-              ].map(s => (
+              {copy.cta_steps.map(s => (
                 <div key={s.n} style={{ borderTop: '1px solid rgba(201,165,90,0.4)', paddingTop: 12 }}>
                   <div className='mono tnum' style={{ fontSize: 11, color: '#C9A55A', letterSpacing: '0.12em' }}>{s.n}</div>
                   <div style={{ fontSize: 16, marginTop: 6, fontWeight: 500 }}>{s.t}</div>
@@ -1031,7 +1011,7 @@ function MemoCTA({ p }: { p: Property }) {
                 Request package · {p.name.split(' ').slice(0, 2).join(' ')} →
               </Link>
               <Link href='/properties' className='btn btn-ghost' style={{ color: '#F5EFE2', borderColor: 'rgba(245,239,226,0.3)' }}>
-                Compare other listings
+                {copy.cta_compare_label}
               </Link>
             </div>
             <div
@@ -1043,7 +1023,7 @@ function MemoCTA({ p }: { p: Property }) {
                 letterSpacing: '0.08em',
               }}
             >
-              NDA-PROTECTED · ACCREDITED INVESTORS · NO COST TO RECEIVE
+              {copy.cta_footnote}
             </div>
           </div>
 
@@ -1059,7 +1039,7 @@ function MemoCTA({ p }: { p: Property }) {
             >
               <div>
                 <div className='data-label' style={{ color: 'rgba(245,239,226,0.5)' }}>On this page</div>
-                <div className='display' style={{ fontSize: 22, marginTop: 4 }}>Public preview</div>
+                <div className='display' style={{ fontSize: 22, marginTop: 4 }}>{copy.cta_shown_label}</div>
               </div>
               <span className='mono' style={{ fontSize: 10, color: 'rgba(245,239,226,0.5)', letterSpacing: '0.08em' }}>
                 {shown.length} ITEMS
@@ -1096,7 +1076,7 @@ function MemoCTA({ p }: { p: Property }) {
             >
               <div>
                 <div className='data-label' style={{ color: '#C9A55A' }}>In the package</div>
-                <div className='display' style={{ fontSize: 22, marginTop: 4, color: '#F5EFE2' }}>Gated</div>
+                <div className='display' style={{ fontSize: 22, marginTop: 4, color: '#F5EFE2' }}>{copy.cta_gated_label}</div>
               </div>
               <span className='mono' style={{ fontSize: 10, color: '#C9A55A', letterSpacing: '0.08em' }}>
                 {gated.length} ITEMS

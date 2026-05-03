@@ -3,6 +3,19 @@ import Link from 'next/link';
 import { getPublishedProperties } from '@/lib/data/cms';
 import { getPublishedPosts } from '@/lib/data/posts';
 import {
+  getHomepageHeroImage,
+  getHomepageCredibility,
+  getHomepageVideos,
+  getHomepageOccupancyChart,
+  getHomepageNbhdComparison,
+  getHomepageCopy,
+  type CredibilityStat,
+  type VideoTile,
+  type OccupancyChart as OccupancyChartData,
+  type NbhdComparisonRow,
+  type HomepageCopy,
+} from '@/lib/data/editorial';
+import {
   Disclaimer,
   StickyCTA,
   PropertyArt,
@@ -16,30 +29,28 @@ export const metadata: Metadata = {
     'San Miguel de Allende real estate investment platform — real ADR data, turnkey LRM management, income-producing second homes underwritten with institutional rigor.',
 };
 
-const HERO_IMAGE =
-  'https://images.unsplash.com/photo-1518105779142-d975f22f1b0a?auto=format&fit=crop&w=2400&q=80';
-
-// Faithful port of design5/.../home.jsx. Every section pulls from the data
-// layer where possible — Featured properties from getPublishedProperties,
-// the InsightStrip from getPublishedPosts (PR #14). Editorial copy
-// (credibility stats, video tiles, lead-capture access list) lives inline;
-// can move to site_content if/when admin needs to edit without code changes.
-
 export default async function HomePage() {
-  const [properties, posts] = await Promise.all([
-    getPublishedProperties(),
-    getPublishedPosts(),
-  ]);
+  const [properties, posts, heroImage, credibility, videos, occupancy, nbhds, copy] =
+    await Promise.all([
+      getPublishedProperties(),
+      getPublishedPosts(),
+      getHomepageHeroImage(),
+      getHomepageCredibility(),
+      getHomepageVideos(),
+      getHomepageOccupancyChart(),
+      getHomepageNbhdComparison(),
+      getHomepageCopy(),
+    ]);
 
   return (
     <div className='doc-page' data-screen-label='Home'>
-      <Hero />
-      <Credibility />
-      <FeaturedPreview properties={properties.slice(0, 3)} />
-      <MarketPreview />
-      <VideoSection />
-      <InsightStrip posts={posts.slice(0, 3)} />
-      <LeadCapture />
+      <Hero heroImage={heroImage} copy={copy} />
+      <Credibility stats={credibility} copy={copy} />
+      <FeaturedPreview properties={properties.slice(0, 3)} copy={copy} />
+      <MarketPreview occupancy={occupancy} nbhds={nbhds} copy={copy} />
+      <VideoSection videos={videos} copy={copy} />
+      <InsightStrip posts={posts.slice(0, 3)} copy={copy} />
+      <LeadCapture copy={copy} />
       <Disclaimer />
       <StickyCTA />
     </div>
@@ -50,7 +61,7 @@ export default async function HomePage() {
 // Hero — cinematic Ken Burns with data card
 // ===========================================================================
 
-function Hero() {
+function Hero({ heroImage, copy }: { heroImage: string; copy: HomepageCopy }) {
   return (
     <section
       style={{
@@ -66,7 +77,7 @@ function Hero() {
         style={{
           position: 'absolute',
           inset: 0,
-          backgroundImage: `url(${HERO_IMAGE})`,
+          backgroundImage: `url(${heroImage})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center 40%',
         }}
@@ -125,7 +136,7 @@ function Hero() {
               }}
             >
               <span style={{ display: 'inline-block', width: 24, height: 1, background: '#C9A55A' }} />
-              <span>San Miguel de Allende · Vol. 04 · Q1 2026</span>
+              <span>{copy.hero_eyebrow}</span>
             </div>
             <h1
               className='display'
@@ -136,9 +147,9 @@ function Hero() {
                 maxWidth: 1100,
               }}
             >
-              Invest in San Miguel&apos;s most
+              {copy.hero_headline_pre}
               <br />
-              <span className='display-italic' style={{ color: '#D9CFB8' }}>desirable luxury rental</span> market.
+              <span className='display-italic' style={{ color: '#D9CFB8' }}>{copy.hero_headline_italic}</span>{copy.hero_headline_post}
             </h1>
             <p
               style={{
@@ -149,22 +160,21 @@ function Hero() {
                 color: 'rgba(245,239,226,0.78)',
               }}
             >
-              Real ADR data. Turnkey LRM management. Income-producing second homes underwritten
-              with the rigor of an institutional fund — not a brokerage pitch.
+              {copy.hero_paragraph}
             </p>
             <div style={{ display: 'flex', gap: 12, marginTop: 40, flexWrap: 'wrap' }}>
-              <Link href='/properties' className='btn btn-gold'>See Featured Opportunities →</Link>
+              <Link href={copy.hero_cta_primary_href} className='btn btn-gold'>{copy.hero_cta_primary_label}</Link>
               <Link
-                href='/roi-calculator'
+                href={copy.hero_cta_secondary_href}
                 className='btn btn-ghost'
                 style={{ color: '#F5EFE2', borderColor: 'rgba(245,239,226,0.4)' }}
               >
-                Calculate Your ROI
+                {copy.hero_cta_secondary_label}
               </Link>
             </div>
           </div>
 
-          <HeroDataCard />
+          <HeroDataCard copy={copy} />
         </div>
       </div>
 
@@ -236,13 +246,8 @@ function CrosshairFrame() {
   );
 }
 
-function HeroDataCard() {
-  const stats = [
-    { l: 'Avg occupancy', v: '62.4%', d: '+3.1', up: true },
-    { l: 'Centro ADR', v: '$418', d: '+8.2%', up: true },
-    { l: 'YoY visitors', v: '+11.8%', d: '↑', up: true },
-    { l: 'Gross yield', v: '9.2%', d: '+0.4', up: true },
-  ];
+function HeroDataCard({ copy }: { copy: HomepageCopy }) {
+  const stats = copy.hero_card_stats;
   return (
     <div
       className='fade-up hero-data-card'
@@ -275,10 +280,10 @@ function HeroDataCard() {
             color: '#C9A55A',
           }}
         >
-          Q1 2026 · Snapshot
+          {copy.hero_card_eyebrow}
         </span>
         <span style={{ fontFamily: 'var(--f-mono)', fontSize: 10, color: 'rgba(245,239,226,0.5)' }}>
-          Updated 04·28
+          {copy.hero_card_updated}
         </span>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
@@ -330,7 +335,7 @@ function HeroDataCard() {
           lineHeight: 1.5,
         }}
       >
-        Aggregated across 312 LRM-managed and tracked properties in Q1.
+        {copy.hero_card_footer}
       </div>
     </div>
   );
@@ -340,13 +345,7 @@ function HeroDataCard() {
 // Credibility · Track record stats
 // ===========================================================================
 
-function Credibility() {
-  const stats = [
-    { num: '312', label: 'Properties\ntracked' },
-    { num: '$2.4B', label: 'AUM in San\nMiguel market' },
-    { num: '11', label: 'Years operating\nLRM portfolio' },
-    { num: '94%', label: 'Investor 2nd-\ntransaction rate' },
-  ];
+function Credibility({ stats, copy }: { stats: CredibilityStat[]; copy: HomepageCopy }) {
   return (
     <section
       style={{
@@ -367,9 +366,9 @@ function Credibility() {
           className='credibility-grid'
         >
           <div style={{ maxWidth: 360 }}>
-            <div className='eyebrow'>02 · Track Record</div>
+            <div className='eyebrow'>{copy.credibility_eyebrow}</div>
             <h3 className='display' style={{ fontSize: 32, marginTop: 12, lineHeight: 1.1 }}>
-              The data behind <span className='display-italic'>every</span> investment memo.
+              {copy.credibility_title_pre}<span className='display-italic'>{copy.credibility_title_italic}</span>{copy.credibility_title_post}
             </h3>
           </div>
           <div
@@ -408,24 +407,20 @@ function Credibility() {
 // FeaturedPreview · 3 properties
 // ===========================================================================
 
-function FeaturedPreview({ properties }: { properties: Property[] }) {
+function FeaturedPreview({ properties, copy }: { properties: Property[]; copy: HomepageCopy }) {
   return (
     <section style={{ padding: '40px 0 100px', background: '#FBF8F0' }}>
       <div className='container'>
         <div className='section-head'>
           <div>
-            <div className='lead-num'>03 · Active Opportunities</div>
+            <div className='lead-num'>{copy.featured_eyebrow}</div>
             <h2>
-              Underwritten,
+              {copy.featured_title_pre}
               <br />
-              <span className='display-italic'>turnkey-ready.</span>
+              <span className='display-italic'>{copy.featured_title_italic}</span>
             </h2>
           </div>
-          <p className='lede'>
-            Off-market and selectively-listed properties with full investment memos, ADR
-            projections, and a defined upgrade thesis. We turn down ~40 properties for every one
-            we accept onto the platform.
-          </p>
+          <p className='lede'>{copy.featured_lede}</p>
         </div>
         <div
           style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, marginTop: 16 }}
@@ -451,10 +446,10 @@ function FeaturedPreview({ properties }: { properties: Property[] }) {
             className='mono'
             style={{ fontSize: 12, color: '#3A362F', letterSpacing: '0.08em' }}
           >
-            +3 more on the platform · 14 off-market deals available with investor access
+            {copy.featured_footnote}
           </span>
           <Link href='/properties' className='btn btn-ghost'>
-            All Properties →
+            {copy.featured_cta_label}
           </Link>
         </div>
       </div>
@@ -564,7 +559,15 @@ function PropertyCardCompact({ p }: { p: Property }) {
 // MarketPreview (dark) · OccupancyChart + NbhdComparison
 // ===========================================================================
 
-function MarketPreview() {
+function MarketPreview({
+  occupancy,
+  nbhds,
+  copy,
+}: {
+  occupancy: OccupancyChartData;
+  nbhds: NbhdComparisonRow[];
+  copy: HomepageCopy;
+}) {
   return (
     <section
       className='surface-dark'
@@ -573,17 +576,15 @@ function MarketPreview() {
       <div className='container'>
         <div className='section-head' style={{ borderBottom: '1px solid rgba(245,239,226,0.12)', paddingBottom: 56 }}>
           <div>
-            <div className='lead-num' style={{ color: '#C9A55A' }}>04 · Market Intelligence</div>
+            <div className='lead-num' style={{ color: '#C9A55A' }}>{copy.market_eyebrow}</div>
             <h2 style={{ color: '#F5EFE2' }}>
-              Proprietary data,
+              {copy.market_title_pre}
               <br />
-              <span className='display-italic' style={{ color: '#D9CFB8' }}>not realtor lore.</span>
+              <span className='display-italic' style={{ color: '#D9CFB8' }}>{copy.market_title_italic}</span>
             </h2>
           </div>
           <p className='lede' style={{ color: 'rgba(245,239,226,0.7)' }}>
-            We track ADR, occupancy, and seasonal demand across 312 properties in San Miguel — the
-            only dataset of its kind. A summary view below; the full report ships to verified
-            investors.
+            {copy.market_lede}
           </p>
         </div>
 
@@ -591,8 +592,8 @@ function MarketPreview() {
           style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 32, marginTop: 48 }}
           className='market-grid'
         >
-          <OccupancyChart />
-          <NbhdComparison />
+          <OccupancyChart data={occupancy} copy={copy} />
+          <NbhdComparison nbhds={nbhds} copy={copy} />
         </div>
 
         <div
@@ -608,10 +609,10 @@ function MarketPreview() {
           }}
         >
           <div className='mono' style={{ fontSize: 12, color: 'rgba(245,239,226,0.6)', letterSpacing: '0.08em' }}>
-            Source: LRM proprietary index · n=312 · Q1 2024 — Q1 2026
+            {copy.market_source}
           </div>
           <Link href='/market-data' className='btn btn-ghost' style={{ color: '#F5EFE2', borderColor: 'rgba(245,239,226,0.4)' }}>
-            Full Market Dashboard →
+            {copy.market_cta_label}
           </Link>
         </div>
       </div>
@@ -619,9 +620,8 @@ function MarketPreview() {
   );
 }
 
-function OccupancyChart() {
-  const months = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
-  const data = [78, 82, 76, 64, 52, 48, 54, 56, 58, 68, 81, 86];
+function OccupancyChart({ data: chart, copy }: { data: OccupancyChartData; copy: HomepageCopy }) {
+  const { months, data, fig_label, title, annual_avg } = chart;
   const max = 100;
   const w = 720;
   const h = 280;
@@ -631,11 +631,11 @@ function OccupancyChart() {
     <div style={{ background: 'rgba(245,239,226,0.03)', border: '1px solid rgba(245,239,226,0.1)', padding: 32 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 24 }}>
         <div>
-          <div className='data-label' style={{ color: '#C9A55A' }}>Fig. 01 · Seasonal Occupancy</div>
-          <div className='display' style={{ fontSize: 26, marginTop: 8 }}>2025 average — 4-bedroom SMA</div>
+          <div className='data-label' style={{ color: '#C9A55A' }}>{fig_label}</div>
+          <div className='display' style={{ fontSize: 26, marginTop: 8 }}>{title}</div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div className='mono tnum' style={{ fontSize: 28, color: '#C9A55A' }}>62.4%</div>
+          <div className='mono tnum' style={{ fontSize: 28, color: '#C9A55A' }}>{annual_avg}</div>
           <div className='data-label' style={{ marginTop: 4 }}>Annual avg</div>
         </div>
       </div>
@@ -714,29 +714,22 @@ function OccupancyChart() {
       >
         <span>
           <span style={{ display: 'inline-block', width: 10, height: 10, background: '#C9A55A', marginRight: 6, verticalAlign: 'middle' }} />
-          PEAK · NOV–MAR
+          {copy.legend_peak}
         </span>
         <span>
           <span style={{ display: 'inline-block', width: 10, height: 10, background: '#3F6B55', marginRight: 6, verticalAlign: 'middle' }} />
-          SHOULDER · APR–OCT
+          {copy.legend_shoulder}
         </span>
       </div>
     </div>
   );
 }
 
-function NbhdComparison() {
-  const nbhds = [
-    { name: 'Centro Histórico', adr: 418, yield: 9.8 },
-    { name: 'Atascadero', adr: 362, yield: 8.4 },
-    { name: 'San Antonio', adr: 294, yield: 9.2 },
-    { name: 'Los Frailes', adr: 312, yield: 7.6 },
-    { name: 'El Chorro', adr: 486, yield: 8.9 },
-  ];
+function NbhdComparison({ nbhds, copy }: { nbhds: NbhdComparisonRow[]; copy: HomepageCopy }) {
   return (
     <div style={{ background: 'rgba(245,239,226,0.03)', border: '1px solid rgba(245,239,226,0.1)', padding: 32 }}>
-      <div className='data-label' style={{ color: '#C9A55A' }}>Fig. 02 · Neighborhoods</div>
-      <div className='display' style={{ fontSize: 22, marginTop: 8, marginBottom: 24 }}>ADR by district</div>
+      <div className='data-label' style={{ color: '#C9A55A' }}>{copy.nbhd_chart_label}</div>
+      <div className='display' style={{ fontSize: 22, marginTop: 8, marginBottom: 24 }}>{copy.nbhd_chart_title}</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
         {nbhds.map(n => {
           const pct = (n.adr / 500) * 100;
@@ -776,46 +769,20 @@ function NbhdComparison() {
 // Video section
 // ===========================================================================
 
-function VideoSection() {
-  const videos = [
-    {
-      id: 'v1',
-      title: 'Q1 Market Update — what shifted',
-      dur: '8:42',
-      img: 'https://images.unsplash.com/photo-1555881400-69d63dca8a91?auto=format&fit=crop&w=1200&q=80',
-      cat: 'Market Update',
-    },
-    {
-      id: 'v2',
-      title: 'Inside Casa Solana — full property tour',
-      dur: '12:18',
-      img: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1200&q=80',
-      cat: 'Property Tour',
-    },
-    {
-      id: 'v3',
-      title: 'How LRM manages a 5-property portfolio',
-      dur: '14:05',
-      img: 'https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=1200&q=80',
-      cat: 'Operator Series',
-    },
-  ];
+function VideoSection({ videos, copy }: { videos: VideoTile[]; copy: HomepageCopy }) {
   return (
     <section style={{ background: '#FBF8F0', padding: '120px 0' }}>
       <div className='container'>
         <div className='section-head'>
           <div>
-            <div className='lead-num'>05 · Video Library</div>
+            <div className='lead-num'>{copy.video_eyebrow}</div>
             <h2>
-              Watch the
+              {copy.video_title_pre}
               <br />
-              <span className='display-italic'>homework.</span>
+              <span className='display-italic'>{copy.video_title_italic}</span>
             </h2>
           </div>
-          <p className='lede'>
-            Quarterly market updates, full property tours, and operator-series interviews. We
-            publish what we see on the ground — not curated marketing.
-          </p>
+          <p className='lede'>{copy.video_lede}</p>
         </div>
         <div
           style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 16, marginTop: 32 }}
@@ -910,7 +877,13 @@ function VideoCard({
 // InsightStrip · 3 latest posts (from articles table)
 // ===========================================================================
 
-function InsightStrip({ posts }: { posts: Array<{ slug: string; title: string; category: string; date: string }> }) {
+function InsightStrip({
+  posts,
+  copy,
+}: {
+  posts: Array<{ slug: string; title: string; category: string; date: string }>;
+  copy: HomepageCopy;
+}) {
   const fallback = [
     { slug: 'q1-market-report', title: 'Q1 2026: Inventory tightens, ADR climbs 8% YoY', category: 'Market Report', date: '2026-04-18' },
     { slug: 'fideicomiso-vs-corp', title: 'Fideicomiso vs. Mexican corporation: what we recommend', category: 'Buyer Education', date: '2026-04-11' },
@@ -936,12 +909,12 @@ function InsightStrip({ posts }: { posts: Array<{ slug: string; title: string; c
           }}
         >
           <div>
-            <div className='lead-num'>07 · Latest insights</div>
+            <div className='lead-num'>{copy.insights_eyebrow}</div>
             <h2 className='display' style={{ fontSize: 36, marginTop: 8 }}>
-              From the desk.
+              {copy.insights_title}
             </h2>
           </div>
-          <Link href='/insights' className='btn-link'>All insights →</Link>
+          <Link href='/insights' className='btn-link'>{copy.insights_cta_label}</Link>
         </div>
         <div
           style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 32 }}
@@ -994,13 +967,8 @@ function InsightStrip({ posts }: { posts: Array<{ slug: string; title: string; c
 // Lead capture (dark green section)
 // ===========================================================================
 
-function LeadCapture() {
-  const benefits = [
-    'Q1 2026 SMA Market Report (52pp)',
-    '14 off-market property memos',
-    'Quarterly investor briefing call',
-    'Direct line to LRM acquisitions',
-  ];
+function LeadCapture({ copy }: { copy: HomepageCopy }) {
+  const benefits = copy.lead_benefits;
   return (
     <section
       className='surface-dark'
@@ -1027,7 +995,7 @@ function LeadCapture() {
           className='lead-capture-grid'
         >
           <div>
-            <div className='lead-num' style={{ color: '#C9A55A' }}>06 · Investor Access</div>
+            <div className='lead-num' style={{ color: '#C9A55A' }}>{copy.lead_eyebrow}</div>
             <h2
               className='display'
               style={{
@@ -1038,13 +1006,12 @@ function LeadCapture() {
                 letterSpacing: '-0.025em',
               }}
             >
-              The full underwriting
+              {copy.lead_title_pre}
               <br />
-              <span className='display-italic' style={{ color: '#D9CFB8' }}>is gated.</span>
+              <span className='display-italic' style={{ color: '#D9CFB8' }}>{copy.lead_title_italic}</span>
             </h2>
             <p style={{ fontSize: 17, lineHeight: 1.6, color: 'rgba(245,239,226,0.78)', maxWidth: 460 }}>
-              Verified investors receive: full Q1 2026 market report (52 pages), off-market
-              property memos, ROI underwriting models, and a direct line to our acquisition team.
+              {copy.lead_paragraph}
             </p>
             <div style={{ marginTop: 40, display: 'flex', flexDirection: 'column', gap: 16 }}>
               {benefits.map((b, i) => (
@@ -1067,14 +1034,14 @@ function LeadCapture() {
             }}
           >
             <div className='data-label' style={{ color: '#C9A55A', marginBottom: 24 }}>
-              Request Investor Access
+              {copy.lead_form_eyebrow}
             </div>
             <Link
               href='/contact'
               className='btn btn-gold'
               style={{ width: '100%', marginTop: 8 }}
             >
-              Open the full form →
+              {copy.lead_form_cta_label}
             </Link>
             <div
               className='mono'
@@ -1087,7 +1054,7 @@ function LeadCapture() {
                 marginTop: 16,
               }}
             >
-              Reviewed within 24h · Not all applicants qualified
+              {copy.lead_form_footnote}
             </div>
           </div>
         </div>

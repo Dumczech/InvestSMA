@@ -11,7 +11,9 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, LineChart, L
 // classes are defined in app/globals.css.
 // ===========================================================================
 
-const PAGES: Array<{ id: string; label: string; href: string }> = [
+type NavPage = { id: string; label: string; href: string };
+
+const DEFAULT_PAGES: NavPage[] = [
   { id: 'home',       label: 'Home',            href: '/' },
   { id: 'properties', label: 'Properties',      href: '/properties' },
   { id: 'market',     label: 'Market Data',     href: '/market-data' },
@@ -28,12 +30,20 @@ export const Logo = ({ dark }: { dark?: boolean }) => (
   </Link>
 );
 
-export const Nav = ({ active, dark }: { active?: string; dark?: boolean }) => (
+export const Nav = ({
+  active,
+  dark,
+  pages = DEFAULT_PAGES,
+}: {
+  active?: string;
+  dark?: boolean;
+  pages?: NavPage[];
+}) => (
   <nav className={`nav ${dark ? 'dark-nav' : ''}`}>
     <div className='nav-inner'>
       <Logo dark={dark} />
       <div className='nav-links'>
-        {PAGES.map(p => (
+        {pages.map(p => (
           <Link
             key={p.id}
             href={p.href}
@@ -56,7 +66,9 @@ export const Nav = ({ active, dark }: { active?: string; dark?: boolean }) => (
 
 // Bloomberg-style marquee. The duplicated <span> set inside .marquee-track
 // keeps the animation seamless (translateX -50% wraps cleanly).
-const TICKER_ITEMS: Array<{ label: string; val: string; delta: string; up: boolean }> = [
+type TickerItem = { label: string; val: string; delta: string; up: boolean };
+
+const DEFAULT_TICKER_ITEMS: TickerItem[] = [
   { label: 'SMA·OCC',          val: '62.4%',     delta: '+3.1%',      up: true  },
   { label: 'CENTRO·ADR',       val: '$418',      delta: '+8.2%',      up: true  },
   { label: 'ATASCADERO·ADR',   val: '$362',      delta: '+5.4%',      up: true  },
@@ -69,10 +81,10 @@ const TICKER_ITEMS: Array<{ label: string; val: string; delta: string; up: boole
   { label: 'INVENTORY',        val: '–4.2%',     delta: 'tightening', up: false },
 ];
 
-export const Ticker = () => (
+export const Ticker = ({ items = DEFAULT_TICKER_ITEMS }: { items?: TickerItem[] }) => (
   <div className='ticker'>
     <div className='marquee-track'>
-      {[...TICKER_ITEMS, ...TICKER_ITEMS].map((it, i) => (
+      {[...items, ...items].map((it, i) => (
         <span key={i} className='ticker-item'>
           <span className='label'>{it.label}</span>
           <span className='val tnum'>{it.val}</span>
@@ -120,47 +132,86 @@ export const Disclaimer = () => (
   </div>
 );
 
-export const Footer = () => (
+type FooterLink = { label: string; href?: string };
+type FooterConfig = {
+  tagline: string;
+  chips: string[];
+  explore: FooterLink[];
+  resources: FooterLink[];
+  contact: FooterLink[];
+  copyright: string;
+  tagline_short: string;
+};
+
+const DEFAULT_FOOTER: FooterConfig = {
+  tagline:
+    'A research and lead-gen platform for investors evaluating turnkey luxury rental properties in San Miguel de Allende. Operated by Luxury Rental Management.',
+  chips: ['Operator-led', 'Real Data'],
+  explore: [
+    { label: 'Featured Properties', href: '/properties' },
+    { label: 'Market Data',         href: '/market-data' },
+    { label: 'ROI Calculator',      href: '/roi-calculator' },
+    { label: 'Insights & Reports',  href: '/insights' },
+  ],
+  resources: [
+    { label: "Buyer's Guide",      href: '/insights' },
+    { label: 'Q1 Market Report',   href: '/insights' },
+    { label: 'Tax & Ownership',    href: '/insights' },
+    { label: 'Case Studies',       href: '/insights' },
+  ],
+  contact: [
+    { label: 'Request Access',                href: '/contact' },
+    { label: 'justin@luxrentalmgmt.com',      href: 'mailto:justin@luxrentalmgmt.com' },
+    { label: '+1 (512) 366-2801',             href: 'tel:+15123662801' },
+    { label: 'San Miguel de Allende, GTO' },
+  ],
+  copyright: '© 2026 Luxury Rental Management · justin@luxrentalmgmt.com · +1 (512) 366-2801',
+  tagline_short: 'Estimates are directional only — not guaranteed.',
+};
+
+const renderFooterLink = (l: FooterLink, i: number) => {
+  const isExternal = l.href && /^(mailto:|tel:|https?:)/.test(l.href);
+  if (!l.href) {
+    return <li key={i} style={{ opacity: 0.6 }}>{l.label}</li>;
+  }
+  if (isExternal) {
+    return <li key={i}><a href={l.href}>{l.label}</a></li>;
+  }
+  return <li key={i}><Link href={l.href}>{l.label}</Link></li>;
+};
+
+export const Footer = ({ config = DEFAULT_FOOTER }: { config?: FooterConfig }) => (
   <footer className='footer'>
     <div className='container'>
       <div className='footer-grid'>
         <div>
           <Logo dark />
           <p style={{ marginTop: 24, maxWidth: 380, opacity: 0.7, fontSize: 14, lineHeight: 1.7 }}>
-            A research and lead-gen platform for investors evaluating turnkey luxury rental
-            properties in San Miguel de Allende. Operated by Luxury Rental Management.
+            {config.tagline}
           </p>
-          <div style={{ marginTop: 24, display: 'flex', gap: 12 }}>
-            <span className='chip' style={{ borderColor: 'rgba(245,239,226,0.25)', color: '#D9CFB8' }}>Operator-led</span>
-            <span className='chip' style={{ borderColor: 'rgba(245,239,226,0.25)', color: '#D9CFB8' }}>Real Data</span>
+          <div style={{ marginTop: 24, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            {config.chips.map((c, i) => (
+              <span
+                key={i}
+                className='chip'
+                style={{ borderColor: 'rgba(245,239,226,0.25)', color: '#D9CFB8' }}
+              >
+                {c}
+              </span>
+            ))}
           </div>
         </div>
         <div>
           <h4>Explore</h4>
-          <ul>
-            <li><Link href='/properties'>Featured Properties</Link></li>
-            <li><Link href='/market-data'>Market Data</Link></li>
-            <li><Link href='/roi-calculator'>ROI Calculator</Link></li>
-            <li><Link href='/insights'>Insights & Reports</Link></li>
-          </ul>
+          <ul>{config.explore.map(renderFooterLink)}</ul>
         </div>
         <div>
           <h4>Resources</h4>
-          <ul>
-            <li><Link href='/insights'>Buyer&apos;s Guide</Link></li>
-            <li><Link href='/insights'>Q1 Market Report</Link></li>
-            <li><Link href='/insights'>Tax & Ownership</Link></li>
-            <li><Link href='/insights'>Case Studies</Link></li>
-          </ul>
+          <ul>{config.resources.map(renderFooterLink)}</ul>
         </div>
         <div>
           <h4>Contact</h4>
-          <ul>
-            <li><Link href='/contact'>Request Access</Link></li>
-            <li><a href='mailto:justin@luxrentalmgmt.com'>justin@luxrentalmgmt.com</a></li>
-            <li><a href='tel:+15123662801'>+1 (512) 366-2801</a></li>
-            <li style={{ opacity: 0.6 }}>San Miguel de Allende, GTO</li>
-          </ul>
+          <ul>{config.contact.map(renderFooterLink)}</ul>
         </div>
       </div>
       <div
@@ -179,11 +230,11 @@ export const Footer = () => (
           textTransform: 'uppercase',
         }}
       >
-        <span>© 2026 Luxury Rental Management · justin@luxrentalmgmt.com · +1 (512) 366-2801</span>
+        <span>{config.copyright}</span>
         <span style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
           <Link href='/legal#disclosures' style={{ color: 'inherit' }}>Disclosures</Link>
           <Link href='/legal#terms' style={{ color: 'inherit' }}>Terms</Link>
-          <span>Estimates are directional only — not guaranteed.</span>
+          <span>{config.tagline_short}</span>
         </span>
       </div>
     </div>

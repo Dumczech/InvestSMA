@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Disclaimer } from '@/components/site';
+import { getContactFormOptions, getContactCopy } from '@/lib/data/editorial';
 import ContactClient from './ContactClient';
 
 export const metadata: Metadata = {
@@ -8,10 +9,11 @@ export const metadata: Metadata = {
     'Apply for investor access to San Miguel de Allende luxury rental opportunities — 24-hour response, off-market deals, and the LRM acquisition team.',
 };
 
-export default function ContactPage() {
+export default async function ContactPage() {
+  const [opts, copy] = await Promise.all([getContactFormOptions(), getContactCopy()]);
   return (
     <div className='doc-page' data-screen-label='Contact'>
-      <ContactClient />
+      <ContactClient options={opts} copy={copy} />
       <Disclaimer />
     </div>
   );
