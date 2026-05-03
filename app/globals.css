@@ -435,6 +435,27 @@ body:has(.nav) { background: var(--paper); color: var(--ink); }
     gap: 24px !important;
   }
   .lead-capture-grid { gap: 32px !important; }
+
+  /* About page section grids */
+  .are-grid,
+  .broker-grid,
+  .lrm-grid,
+  .pullquote-grid,
+  .closing-grid {
+    grid-template-columns: 1fr !important;
+    gap: 32px !important;
+  }
+  .criteria-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+  .pullquote-foot {
+    grid-template-columns: 1fr !important;
+  }
+  .playbook-row {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
 }
 
 /* ===== Form fields (lead-capture / contact / roi-calculator) ===== */
