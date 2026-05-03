@@ -131,6 +131,14 @@ function rowToProperty(r: any, fallbackImage: string) {
   const images = heroImage
     ? [heroImage, ...dbImages.filter((u: string) => u !== heroImage)]
     : dbImages;
+
+  // Parse first integer from "61%–72%", "~62%", "60%", etc. into the
+  // numeric `occupancyPercent` exposed alongside the formatted string.
+  const occMatch = typeof r.occupancy_assumption === 'string'
+    ? r.occupancy_assumption.match(/(\d+(?:\.\d+)?)/)
+    : null;
+  const occupancyPercent = occMatch ? Number(occMatch[1]) : undefined;
+
   return {
     slug: r.slug,
     name: r.name,
@@ -153,6 +161,12 @@ function rowToProperty(r: any, fallbackImage: string) {
     accent2: typeof r.accent2 === 'string' && r.accent2 ? r.accent2 : undefined,
     style: r.style === 'colonial' || r.style === 'hacienda' || r.style === 'villa' ? r.style : undefined,
     heroImage: heroImage || undefined,
+    priceUsd: typeof r.price_usd === 'number' ? r.price_usd : undefined,
+    adrLow: typeof r.adr_low === 'number' ? r.adr_low : undefined,
+    adrHigh: typeof r.adr_high === 'number' ? r.adr_high : undefined,
+    annualGrossLow: typeof r.annual_gross_low === 'number' ? r.annual_gross_low : undefined,
+    annualGrossHigh: typeof r.annual_gross_high === 'number' ? r.annual_gross_high : undefined,
+    occupancyPercent,
   };
 }
 

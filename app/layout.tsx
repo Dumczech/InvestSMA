@@ -1,5 +1,5 @@
 import './globals.css';
-import { Navbar, Footer } from '@/components/site';
+import { Nav, Ticker, Footer } from '@/components/site';
 import type { Metadata } from 'next';
 import { Inter, Cormorant_Garamond, JetBrains_Mono } from 'next/font/google';
 
@@ -25,21 +25,20 @@ const jbMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: 'InvestSMA | San Miguel de Allende Real Estate Investment',
-  description: 'Data-backed intelligence for San Miguel de Allende luxury rental and second-home investments.',
+  description:
+    'Data-backed intelligence for San Miguel de Allende luxury rental and second-home investments.',
 };
 
+// Top-of-page chrome (Nav + Ticker) sits above every route's content;
+// Footer renders below. Page-specific StickyCTA is rendered by individual
+// pages that want it (e.g. /properties) since copy varies per surface.
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html className={`${inter.variable} ${cormorant.variable} ${jbMono.variable}`}>
       <body>
-        <Navbar />
+        <Nav />
+        <Ticker />
         {children}
-        <a
-          href='/contact'
-          className='fixed bottom-4 right-4 rounded-full bg-gold px-4 py-2 text-black md:hidden'
-        >
-          Investor Access
-        </a>
         <Footer />
       </body>
     </html>

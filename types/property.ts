@@ -26,4 +26,15 @@ export type Property = {
   accent2?: string;
   style?: 'colonial' | 'hacienda' | 'villa';
   heroImage?: string;
+  // Raw numeric values exposed alongside the formatted string fields above
+  // so the redesigned cards can sort by price/yield without parsing strings.
+  // All optional; populated by rowToProperty when the corresponding DB
+  // columns are non-null.
+  priceUsd?: number;
+  adrLow?: number;
+  adrHigh?: number;
+  annualGrossLow?: number;
+  annualGrossHigh?: number;
+  occupancyPercent?: number;
 };
+

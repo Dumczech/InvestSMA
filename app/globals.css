@@ -112,12 +112,13 @@ body {
 .dark .btn-ghost { color: var(--ivory); border-color: rgba(245, 239, 226, 0.3); }
 .dark .btn-ghost:hover { background: var(--ivory); color: var(--ink); }
 
-/* Container — bundle pages opt in via .doc-page > .container */
-.doc-page .container {
+/* Container — used by all bundle-style sections (Nav, Footer, hero, etc.) */
+.container {
   max-width: var(--container-w);
   margin: 0 auto;
   padding: 0 32px;
 }
+.doc-page .container { max-width: var(--container-w); margin: 0 auto; padding: 0 32px; }
 
 /* Bundle-style pages render their own dark/cream sections; opt out of the
    global dark body background by wrapping the page in .doc-page so its
@@ -129,3 +130,213 @@ body {
   font-size: 15px;
   line-height: 1.55;
 }
+
+/* ===== Chip ===== */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid rgba(20, 19, 15, 0.2);
+  border-radius: 100px;
+  font-family: var(--f-mono, monospace);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  background: transparent;
+}
+.chip-gold { color: var(--gold); border-color: var(--gold); }
+.chip-green { color: var(--green-2); border-color: var(--green-2); }
+
+/* ===== Nav (top-of-page chrome) ===== */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(251, 248, 240, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(20, 19, 15, 0.08);
+  color: var(--ink);
+}
+.nav.dark-nav {
+  background: rgba(20, 19, 15, 0.85);
+  color: var(--ivory);
+  border-bottom-color: rgba(245, 239, 226, 0.08);
+}
+.nav-inner {
+  max-width: var(--container-w);
+  margin: 0 auto;
+  padding: 14px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+}
+.nav-logo {
+  font-family: var(--f-display, 'Cormorant Garamond', serif);
+  font-size: 22px;
+  letter-spacing: -0.01em;
+  font-weight: 500;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  text-decoration: none;
+}
+.nav-logo .mark {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--gold);
+  border-radius: 50%;
+  margin-right: 4px;
+  transform: translateY(-3px);
+}
+.nav-logo .tag {
+  font-family: var(--f-mono, monospace);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-left: 6px;
+}
+.dark-nav .nav-logo .tag { color: var(--sand-2); }
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+.nav-link {
+  font-family: var(--f-mono, monospace);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: inherit;
+  opacity: 0.7;
+  transition: opacity 160ms;
+  padding: 6px 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+}
+.nav-link:hover, .nav-link.active { opacity: 1; }
+.nav-link.active { border-bottom: 1px solid var(--gold); }
+@media (max-width: 1240px) {
+  .nav-inner { gap: 20px; }
+  .nav-links { gap: 20px; }
+  .nav-logo .tag { display: none; }
+}
+@media (max-width: 920px) {
+  .nav-links { display: none; }
+}
+
+/* ===== Ticker (Bloomberg-style) ===== */
+.ticker {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  padding: 10px 32px;
+  font-family: var(--f-mono, monospace);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid rgba(245, 239, 226, 0.1);
+  background: var(--ink);
+  color: var(--sand);
+  overflow: hidden;
+  white-space: nowrap;
+}
+.ticker-item { display: inline-flex; gap: 8px; align-items: baseline; padding-right: 28px; }
+.ticker-item .label { color: var(--sand-2); opacity: 0.7; }
+.ticker-item .val { color: var(--ivory); }
+.ticker-item .delta-up { color: var(--green-3); }
+.ticker-item .delta-dn { color: #C46A57; }
+.marquee-track {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: marquee 80s linear infinite;
+}
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* ===== Footer ===== */
+.footer {
+  background: var(--ink);
+  color: var(--ivory);
+  padding: 80px 0 40px;
+}
+.footer-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 48px;
+}
+.footer h4 {
+  font-family: var(--f-mono, monospace);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--sand-2);
+  margin: 0 0 20px;
+  font-weight: 500;
+}
+.footer ul { list-style: none; padding: 0; margin: 0; }
+.footer li { margin-bottom: 12px; }
+.footer li a {
+  font-size: 14px;
+  color: var(--ivory);
+  opacity: 0.75;
+  transition: opacity 160ms;
+  text-decoration: none;
+}
+.footer li a:hover { opacity: 1; }
+@media (max-width: 920px) {
+  .footer-grid { grid-template-columns: 1fr 1fr; }
+}
+
+/* ===== Sticky CTA (scroll-triggered) ===== */
+.sticky-cta {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 60;
+  display: flex;
+  gap: 12px;
+  padding: 12px 12px 12px 20px;
+  background: var(--ink);
+  color: var(--ivory);
+  border-radius: 100px;
+  align-items: center;
+  box-shadow: 0 12px 40px rgba(20, 19, 15, 0.25), 0 2px 8px rgba(20, 19, 15, 0.15);
+  transform: translateY(80px);
+  opacity: 0;
+  transition: all 360ms cubic-bezier(.2, .8, .2, 1);
+  text-decoration: none;
+}
+.sticky-cta.visible { transform: translateY(0); opacity: 1; }
+.sticky-cta .label {
+  font-family: var(--f-mono, monospace);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.sticky-cta .label .strong { color: var(--gold-2); }
+
+/* ===== Section helpers ===== */
+.surface-dark {
+  background: var(--ink);
+  color: var(--ivory);
+}
+.lede {
+  font-size: 16px;
+  line-height: 1.6;
+  color: rgba(20, 19, 15, 0.7);
+  max-width: 540px;
+}
+
+/* When the layout chrome (Nav, Ticker, Footer) wraps a page, neutralize the
+   global dark body so cream-paper sections render correctly. The chrome
+   itself sets its own dark/cream surfaces. */
+body:has(.nav) { background: var(--paper); color: var(--ink); }
