@@ -1,1 +1,12 @@
-export default function Page(){return <main className='mx-auto max-w-5xl p-6'><h1 className='text-2xl'>audit-logs</h1><p className='text-white/70 mt-2'>Module placeholder UI for audit-logs.</p><ul className='mt-4 list-disc pl-6 text-sm text-white/70'><li>Supabase table-backed data views</li><li>Mock data fallback before live integration</li><li>TODO: connect Guesty, AirDNA, Pipedrive, and email services where relevant</li></ul></main>}
+import { AdminPlaceholder } from '../_components/AdminPlaceholder';
+
+export default function Page() {
+  return (
+    <AdminPlaceholder
+      crumbs={['Audit Logs']}
+      title='Audit Logs'
+      subtitle='Mutations across the admin (who edited what, when). Pulls from audit_logs.'
+      icon='list'
+    />
+  );
+}

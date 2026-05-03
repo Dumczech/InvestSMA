@@ -1,4 +1,5 @@
 import { getSupabaseServerClient } from '@/lib/supabase/server';
+import { Topbar, Icon } from '../AdminShell';
 import PropertyCmsClient, { type PropertyRow } from './PropertyCmsClient';
 
 export const dynamic = 'force-dynamic';
@@ -17,14 +18,22 @@ async function loadProperties(): Promise<PropertyRow[]> {
 export default async function Page() {
   const rows = await loadProperties();
   return (
-    <main className='mx-auto max-w-6xl p-6'>
-      <h1 className='text-2xl'>Property CMS</h1>
-      <p className='mt-2 text-white/70'>
-        Manage the property cards on <code className='text-sand'>/properties</code> and the
-        memo content on <code className='text-sand'>/properties/[slug]</code>.
-        Status <strong>published</strong> makes it visible on the public site.
-      </p>
-      <PropertyCmsClient initialRows={rows} />
-    </main>
+    <div className='main'>
+      <Topbar crumbs={['Properties']}>
+        <button className='btn btn-sm btn-primary'><Icon name='plus' /> New property</button>
+      </Topbar>
+      <div className='page'>
+        <div className='page-head'>
+          <div>
+            <h1 className='page-title'>Properties</h1>
+            <p className='page-subtitle'>
+              Manage the public catalog. Status <code>published</code> makes a property visible
+              on <code>/properties</code> and the homepage Featured rail.
+            </p>
+          </div>
+        </div>
+        <PropertyCmsClient initialRows={rows} />
+      </div>
+    </div>
   );
 }
