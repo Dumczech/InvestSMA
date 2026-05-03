@@ -2,368 +2,32 @@
 
 import { useMemo, useState } from 'react';
 import { Button, Field, Select, StatusPill, TextArea, TextInput, Toast } from '../_components/forms';
+import { KEY_SCHEMAS, KNOWN_KEY_META, defaultsFromSchema } from './schemas';
+import { SchemaForm } from './SchemaForm';
 
 type Row = { key: string; value: unknown; status: string; updated_at: string };
 type Status = 'published' | 'draft';
+type Mode = 'form' | 'json';
 
-// Well-known keys; quick-fill templates so admins don't have to remember
-// the JSON shape. `usedBy` shows where each key surfaces on the public
-// site so editors know what they're changing. Anything not listed is
-// editable via the catch-all.
-const KNOWN_KEYS: Array<{ key: string; label: string; usedBy: string; template: unknown }> = [
-  {
-    key: 'homepage_hero',
-    label: 'Homepage hero',
-    usedBy: '/ — hero copy',
-    template: { headline: '', subheadline: '' },
-  },
-  {
-    key: 'homepage_metrics',
-    label: 'Homepage metrics',
-    usedBy: '/ — credibility strip',
-    template: { items: [{ label: '', value: '' }] },
-  },
-  {
-    key: 'homepage_market_snapshot',
-    label: 'Homepage market snapshot',
-    usedBy: '/ — compare-view block',
-    template: {
-      title: 'Market Index Snapshot (Compare View)',
-      comparisons: [{ label: 'ADR', lrm: '', market: '' }],
-      ctaLabel: 'Open Full Dashboard',
-      ctaHref: '/market-data',
-    },
-  },
-  {
-    key: 'homepage_gated_cta',
-    label: 'Homepage gated CTA',
-    usedBy: '/ — gated report CTA',
-    template: {
-      title: 'Gated Market Report',
-      body: '',
-      ctaLabel: 'Request access',
-      ctaHref: '/contact',
-    },
-  },
-  {
-    key: 'homepage_hero_image',
-    label: 'Homepage hero image',
-    usedBy: '/ — fullscreen Ken Burns background',
-    template: { url: 'https://images.unsplash.com/...' },
-  },
-  {
-    key: 'homepage_credibility',
-    label: 'Homepage credibility stats',
-    usedBy: '/ — Track Record section (4 stats)',
-    template: {
-      items: [
-        { num: '312',   label: 'Properties\ntracked' },
-        { num: '$2.4B', label: 'AUM in San\nMiguel market' },
-        { num: '11',    label: 'Years operating\nLRM portfolio' },
-        { num: '94%',   label: 'Investor 2nd-\ntransaction rate' },
-      ],
-    },
-  },
-  {
-    key: 'homepage_videos',
-    label: 'Homepage video tiles',
-    usedBy: '/ — Video Library section (3 tiles)',
-    template: {
-      items: [
-        { id: 'v1', title: '', dur: '0:00', img: '', cat: '' },
-      ],
-    },
-  },
-  {
-    key: 'homepage_occupancy_chart',
-    label: 'Homepage occupancy chart',
-    usedBy: '/ — Market Intelligence chart',
-    template: {
-      fig_label: 'Fig. 01 · Seasonal Occupancy',
-      title: '2025 average — 4-bedroom SMA',
-      annual_avg: '62.4%',
-      months: ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'],
-      data: [78, 82, 76, 64, 52, 48, 54, 56, 58, 68, 81, 86],
-    },
-  },
-  {
-    key: 'homepage_nbhd_comparison',
-    label: 'Homepage neighborhood comparison',
-    usedBy: '/ — ADR-by-district bars',
-    template: {
-      items: [{ name: '', adr: 0, yield: 0 }],
-    },
-  },
-  {
-    key: 'ticker_items',
-    label: 'Site ticker (marquee)',
-    usedBy: 'All pages — top Bloomberg-style ticker',
-    template: {
-      items: [
-        { label: 'SMA·OCC', val: '62.4%', delta: '+3.1%', up: true },
-      ],
-    },
-  },
-  {
-    key: 'nav_pages',
-    label: 'Site nav links',
-    usedBy: 'All pages — top navigation',
-    template: {
-      items: [
-        { id: 'home', label: 'Home', href: '/' },
-      ],
-    },
-  },
-  {
-    key: 'footer_config',
-    label: 'Site footer',
-    usedBy: 'All pages — footer columns + copyright',
-    template: {
-      tagline: '',
-      chips: ['Operator-led', 'Real Data'],
-      explore: [{ label: '', href: '' }],
-      resources: [{ label: '', href: '' }],
-      contact: [{ label: '', href: '' }],
-      copyright: '',
-      tagline_short: '',
-    },
-  },
-  {
-    key: 'about_page',
-    label: 'About page editorial',
-    usedBy: '/about — stats, positioning, ops stack',
-    template: {
-      stats: [{ v: '', l: '' }],
-      are_not: [{ t: '', d: '' }],
-      are: [{ t: '', d: '' }],
-      stack: [{ phase: '', items: [''] }],
-    },
-  },
-  {
-    key: 'contact_form_options',
-    label: 'Contact form options',
-    usedBy: '/contact — interest / budget / timeline buttons',
-    template: {
-      interests: [''],
-      budgets: ['$500K–$1M', '$1M–$2M', '$2M–$5M', '$5M+'],
-      timelines: ['0–3 mo', '3–6 mo', '6–12 mo', '12+ mo', 'Researching'],
-    },
-  },
-  {
-    key: 'insights_categories',
-    label: 'Insights categories',
-    usedBy: '/insights — category filter chips (future)',
-    template: {
-      items: [{ id: 'all', label: 'All Insights', matches: null }],
-    },
-  },
-  {
-    key: 'memo_editorial',
-    label: 'Property memo editorial defaults',
-    usedBy: '/properties/[slug] — thesis, upgrades, mgmt, risks, seasonal events',
-    template: {
-      monthly_labels: ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'],
-      seasonality: [88, 84, 76, 64, 48, 42, 56, 58, 54, 64, 78, 92],
-      adr_factor: [1.2, 1.15, 1.05, 0.92, 0.78, 0.72, 0.85, 0.85, 0.82, 0.95, 1.18, 1.35],
-      thesis: [{ t: '', d: '' }],
-      upgrades: [{ item: '', cost: 0, lift: '', payback: '' }],
-      management: [{ phase: '', items: [''] }],
-      management_stats: [{ v: '', l: '' }],
-      risks: [{ t: '', d: '' }],
-      seasonal_events: [{ period: '', date: '', adr: '', occ: '', notes: '' }],
-    },
-  },
-  {
-    key: 'homepage_copy',
-    label: 'Homepage prose',
-    usedBy: '/ — every headline, lede, CTA label, paragraph copy',
-    template: {
-      hero_eyebrow: 'San Miguel de Allende · Vol. 04 · Q1 2026',
-      hero_headline_pre: "Invest in San Miguel''s most",
-      hero_headline_italic: 'desirable luxury rental',
-      hero_headline_post: ' market.',
-      hero_paragraph: 'Real ADR data. ...',
-      hero_cta_primary_label: 'See Featured Opportunities →',
-      hero_cta_primary_href: '/properties',
-      hero_cta_secondary_label: 'Calculate Your ROI',
-      hero_cta_secondary_href: '/roi-calculator',
-      hero_card_eyebrow: 'Q1 2026 · Snapshot',
-      hero_card_updated: 'Updated 04·28',
-      hero_card_stats: [{ l: '', v: '', d: '', up: true }],
-      hero_card_footer: '',
-      credibility_eyebrow: '02 · Track Record',
-      credibility_title_pre: 'The data behind ',
-      credibility_title_italic: 'every',
-      credibility_title_post: ' investment memo.',
-      featured_eyebrow: '03 · Active Opportunities',
-      featured_title_pre: 'Underwritten,',
-      featured_title_italic: 'turnkey-ready.',
-      featured_lede: '',
-      featured_footnote: '',
-      featured_cta_label: 'All Properties →',
-      market_eyebrow: '04 · Market Intelligence',
-      market_title_pre: 'Proprietary data,',
-      market_title_italic: 'not realtor lore.',
-      market_lede: '',
-      market_source: '',
-      market_cta_label: 'Full Market Dashboard →',
-      nbhd_chart_label: 'Fig. 02 · Neighborhoods',
-      nbhd_chart_title: 'ADR by district',
-      legend_peak: 'PEAK · NOV–MAR',
-      legend_shoulder: 'SHOULDER · APR–OCT',
-      video_eyebrow: '05 · Video Library',
-      video_title_pre: 'Watch the',
-      video_title_italic: 'homework.',
-      video_lede: '',
-      insights_eyebrow: '07 · Latest insights',
-      insights_title: 'From the desk.',
-      insights_cta_label: 'All insights →',
-      lead_eyebrow: '06 · Investor Access',
-      lead_title_pre: 'The full underwriting',
-      lead_title_italic: 'is gated.',
-      lead_paragraph: '',
-      lead_benefits: [''],
-      lead_form_eyebrow: 'Request Investor Access',
-      lead_form_cta_label: 'Open the full form →',
-      lead_form_footnote: '',
-    },
-  },
-  {
-    key: 'about_copy',
-    label: 'About page prose',
-    usedBy: '/about — topbar, hero headline, section eyebrows + ledes',
-    template: {
-      topbar: ['§ About InvestSMA', 'Operators · not brokers', 'Est. via Luxury Rental Mgmt'],
-      hero_eyebrow: 'About · 01',
-      hero_headline_pre: "We don't help you\nbuy property.\n",
-      hero_headline_italic: 'We help you build a performing asset.',
-      hero_paragraph: '',
-      positioning_eyebrow: '02 · Positioning',
-      positioning_title_pre: 'What we ',
-      positioning_title_italic: 'are',
-      positioning_title_post: " and aren't.",
-      are_not_label: 'WE ARE NOT',
-      are_label: 'WE ARE',
-      stack_eyebrow: '03 · Operations stack',
-      stack_title_pre: 'Four phases.',
-      stack_title_italic: 'One operator.',
-      stack_lede: '',
-      closing_eyebrow: '04 · Next step',
-      closing_title_pre: 'The portfolio is small\n',
-      closing_title_italic: 'by design.',
-      closing_paragraph: '',
-      closing_cta_apply_label: 'Apply for access →',
-      closing_cta_read_label: 'Read our notes',
-    },
-  },
-  {
-    key: 'contact_copy',
-    label: 'Contact page prose',
-    usedBy: '/contact — hero, 3 step labels, submit copy, trust signals, success page',
-    template: {
-      hero_eyebrow: 'Investor Access · Application',
-      hero_headline_pre: 'Apply for',
-      hero_headline_italic: 'investor access.',
-      hero_paragraph: '',
-      hero_stats: [{ v: '', l: '' }],
-      step_1_eyebrow: 'Step 01 of 03',
-      step_1_title: 'Tell us who you are.',
-      step_1_label_name: 'Full name',
-      step_1_label_email: 'Email',
-      step_1_label_phone: 'Phone',
-      step_2_eyebrow: 'Step 02 of 03',
-      step_2_title: 'Investment profile.',
-      step_2_label_budget: 'Budget range',
-      step_2_label_timeline: 'Buying timeline',
-      step_3_eyebrow: 'Step 03 of 03',
-      step_3_title: 'What are you looking for?',
-      step_3_label_interests: 'Interests · select all',
-      step_3_label_message: 'Anything else? (optional)',
-      step_3_message_placeholder: '',
-      submit_label: 'Request Investor Access →',
-      submit_footnote: '',
-      trust_signals: [{ t: '', d: '' }],
-      submitted_title: 'Application received.',
-      submitted_paragraph: '',
-      submitted_cta_browse_label: 'Browse Properties',
-      submitted_cta_market_label: 'See Market Data',
-    },
-  },
-  {
-    key: 'insights_copy',
-    label: 'Insights page prose',
-    usedBy: '/insights — hero, subscribe form, gated download CTA',
-    template: {
-      hero_eyebrow: 'Field Notes',
-      hero_headline_pre: 'Insights',
-      hero_headline_italic: 'from the field.',
-      hero_paragraph: '',
-      subscribe_placeholder: 'your@email.com',
-      subscribe_label: 'Subscribe →',
-      featured_label: 'Featured this week',
-      empty_state: '',
-      gated_eyebrow: 'Gated · Free',
-      gated_title_pre: 'The 52-page Q1',
-      gated_title_italic: 'SMA Market Report.',
-      gated_paragraph: '',
-      gated_cta_label: 'Download Free →',
-    },
-  },
-  {
-    key: 'memo_copy',
-    label: 'Property memo prose',
-    usedBy: '/properties/[slug] — section titles, subtitles, CTA copy, gated/shown lists',
-    template: {
-      topbar_back_label: '← All Properties',
-      topbar_center_label: 'Underwriting Package · By Request',
-      deal_terms_eyebrow: 'Deal terms',
-      deal_cta_label: 'Request full underwriting →',
-      deal_cta_footnote: '',
-      thesis_title: 'Investment thesis',
-      thesis_subtitle: '',
-      revenue_title: 'Revenue assumptions',
-      revenue_subtitle: '',
-      seasonal_title: 'Seasonal revenue opportunity',
-      seasonal_subtitle: '',
-      seasonal_cols: ['Window', 'Dates', 'Peak ADR', 'Occupancy', 'Notes'],
-      upgrades_title: 'Recommended upgrades',
-      upgrades_summary_label: 'Upgrade summary',
-      upgrades_summary_caption: 'Total recommended capex',
-      upgrades_lift_label: 'ADR uplift (Y2)',
-      upgrades_lift_value: '+$88 / night',
-      upgrades_payback_label: 'Blended payback',
-      upgrades_payback_value: '1.8 years',
-      management_title: 'LRM management strategy',
-      management_subtitle: '',
-      risks_title: 'Risks & considerations',
-      risks_subtitle: '',
-      comps_title: 'Comparable transactions',
-      comps_subtitle: '',
-      comps_gated_label: 'Gated · 2 of 5 trades',
-      comps_gated_caption: '',
-      comps_unlock_label: 'Unlock comp set →',
-      cta_topbar_label: '§ Request the full underwriting package',
-      cta_topbar_response: 'Avg response · 36 hrs',
-      cta_headline_pre: "You've seen the\nsummary.\n",
-      cta_headline_italic: 'Now see the model.',
-      cta_paragraph: '',
-      cta_steps: [{ n: '', t: '', d: '' }],
-      cta_compare_label: 'Compare other listings',
-      cta_footnote: '',
-      cta_shown_label: 'Public preview',
-      cta_gated_label: 'Gated',
-      cta_shown: [''],
-      cta_gated: [''],
-    },
-  },
-];
-
+// Renders a schema-aware form for known keys (every site_content row
+// the public site reads from) and falls back to a raw-JSON textarea
+// for anything not yet in the schema map. A "Raw JSON" toggle lets
+// power users switch even when a schema is available.
 export default function ContentCmsClient({ initialRows }: { initialRows: Row[] }) {
   const [rows, setRows] = useState(initialRows);
   const [selectedKey, setSelectedKey] = useState<string | null>(initialRows[0]?.key ?? null);
-  const [draftKey, setDraftKey] = useState('');
-  const [draftJson, setDraftJson] = useState('');
-  const [draftStatus, setDraftStatus] = useState<Status>('published');
+  const [draftKey, setDraftKey] = useState(initialRows[0]?.key ?? '');
+  const [draftValue, setDraftValue] = useState<Record<string, unknown>>(() => {
+    const first = initialRows[0];
+    return first && first.value && typeof first.value === 'object' ? (first.value as Record<string, unknown>) : {};
+  });
+  const [draftJson, setDraftJson] = useState(
+    initialRows[0] ? JSON.stringify(initialRows[0].value, null, 2) : '',
+  );
+  const [draftStatus, setDraftStatus] = useState<Status>(
+    (initialRows[0]?.status as Status) === 'draft' ? 'draft' : 'published',
+  );
+  const [mode, setMode] = useState<Mode>('form');
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<{ tone: 'ok' | 'err'; msg: string } | null>(null);
 
@@ -372,63 +36,109 @@ export default function ContentCmsClient({ initialRows }: { initialRows: Row[] }
     [rows, selectedKey],
   );
 
+  const schema = useMemo(() => KEY_SCHEMAS[draftKey.trim()] ?? null, [draftKey]);
+  // If the active key has no schema, force JSON mode so the editor
+  // never gets stuck on an empty form.
+  const effectiveMode: Mode = schema ? mode : 'json';
+
   const selectKey = (k: string) => {
     setSelectedKey(k);
     setToast(null);
     const row = rows.find(r => r.key === k);
     if (row) {
       setDraftKey(row.key);
+      const obj = row.value && typeof row.value === 'object' ? (row.value as Record<string, unknown>) : {};
+      setDraftValue(obj);
       setDraftJson(JSON.stringify(row.value, null, 2));
       setDraftStatus(row.status === 'draft' ? 'draft' : 'published');
+      setMode(KEY_SCHEMAS[row.key] ? 'form' : 'json');
     }
   };
 
-  const startNew = (template?: { key: string; template: unknown }) => {
+  const startNew = (key?: string) => {
     setSelectedKey(null);
-    setDraftKey(template?.key ?? '');
-    setDraftJson(JSON.stringify(template?.template ?? {}, null, 2));
-    setDraftStatus('published');
     setToast(null);
+    setDraftKey(key ?? '');
+    if (key && KEY_SCHEMAS[key]) {
+      const def = defaultsFromSchema(KEY_SCHEMAS[key]);
+      setDraftValue(def);
+      setDraftJson(JSON.stringify(def, null, 2));
+      setMode('form');
+    } else {
+      setDraftValue({});
+      setDraftJson('{\n  \n}');
+      setMode('json');
+    }
+    setDraftStatus('published');
+  };
+
+  // Switching modes — keep both sides in sync on toggle.
+  const switchMode = (next: Mode) => {
+    if (next === mode) return;
+    if (next === 'json') {
+      setDraftJson(JSON.stringify(draftValue, null, 2));
+    } else {
+      try {
+        const parsed = JSON.parse(draftJson);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          setDraftValue(parsed as Record<string, unknown>);
+        } else {
+          setToast({ tone: 'err', msg: 'JSON must be an object to switch to form view.' });
+          return;
+        }
+      } catch (e) {
+        setToast({ tone: 'err', msg: `Invalid JSON: ${(e as Error).message}` });
+        return;
+      }
+    }
+    setMode(next);
   };
 
   const save = async () => {
     setToast(null);
-    if (!draftKey.trim()) {
+    const k = draftKey.trim();
+    if (!k) {
       setToast({ tone: 'err', msg: 'Key is required.' });
       return;
     }
     let parsed: unknown;
-    try {
-      parsed = JSON.parse(draftJson);
-    } catch (e) {
-      setToast({ tone: 'err', msg: `Invalid JSON: ${(e as Error).message}` });
-      return;
+    if (effectiveMode === 'form') {
+      parsed = draftValue;
+    } else {
+      try {
+        parsed = JSON.parse(draftJson);
+      } catch (e) {
+        setToast({ tone: 'err', msg: `Invalid JSON: ${(e as Error).message}` });
+        return;
+      }
     }
     setBusy(true);
     try {
       const r = await fetch('/api/admin/content', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ key: draftKey.trim(), value: parsed, status: draftStatus }),
+        body: JSON.stringify({ key: k, value: parsed, status: draftStatus }),
       });
       const j = await r.json();
       if (!j.ok) throw new Error(j.error || 'Save failed');
-      setToast({ tone: 'ok', msg: `Saved ${draftKey}.` });
+      setToast({ tone: 'ok', msg: `Saved ${k}.` });
 
       setRows(prev => {
-        const next = prev.filter(p => p.key !== draftKey.trim());
+        const next = prev.filter(p => p.key !== k);
         return [
           ...next,
-          { key: draftKey.trim(), value: parsed, status: draftStatus, updated_at: new Date().toISOString() },
+          { key: k, value: parsed, status: draftStatus, updated_at: new Date().toISOString() },
         ].sort((a, b) => a.key.localeCompare(b.key));
       });
-      setSelectedKey(draftKey.trim());
+      setSelectedKey(k);
     } catch (e) {
       setToast({ tone: 'err', msg: (e as Error).message });
     } finally {
       setBusy(false);
     }
   };
+
+  const meta = useMemo(() => KNOWN_KEY_META.find(m => m.key === draftKey.trim()), [draftKey]);
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 16, alignItems: 'start' }}>
@@ -475,12 +185,12 @@ export default function ContentCmsClient({ initialRows }: { initialRows: Row[] }
             Templates
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {KNOWN_KEYS.map(t => {
+            {KNOWN_KEY_META.map(t => {
               const exists = rows.some(r => r.key === t.key);
               return (
                 <button
                   key={t.key}
-                  onClick={() => startNew(t)}
+                  onClick={() => startNew(t.key)}
                   className='btn btn-ghost btn-sm'
                   style={{ justifyContent: 'flex-start', flexDirection: 'column', alignItems: 'flex-start', gap: 2, padding: '6px 10px' }}
                   title={t.usedBy}
@@ -519,9 +229,43 @@ export default function ContentCmsClient({ initialRows }: { initialRows: Row[] }
           </Field>
         </div>
 
-        <Field label='Value (JSON)' hint='Free-form; structure varies per key'>
-          <TextArea value={draftJson} onChange={setDraftJson} rows={20} mono />
-        </Field>
+        {meta && (
+          <div className='muted' style={{ fontSize: 12, marginTop: -6 }}>
+            <strong style={{ color: 'var(--text)' }}>Used by:</strong> {meta.usedBy}
+          </div>
+        )}
+
+        {/* Form / JSON toggle */}
+        {schema && (
+          <div className='row' style={{ gap: 6 }}>
+            <Button
+              size='sm'
+              variant={effectiveMode === 'form' ? 'primary' : 'ghost'}
+              onClick={() => switchMode('form')}
+            >
+              Form
+            </Button>
+            <Button
+              size='sm'
+              variant={effectiveMode === 'json' ? 'primary' : 'ghost'}
+              onClick={() => switchMode('json')}
+            >
+              Raw JSON
+            </Button>
+          </div>
+        )}
+
+        {effectiveMode === 'form' && schema ? (
+          <SchemaForm
+            fields={schema}
+            value={draftValue}
+            onChange={setDraftValue}
+          />
+        ) : (
+          <Field label='Value (JSON)' hint='Free-form; structure varies per key'>
+            <TextArea value={draftJson} onChange={setDraftJson} rows={20} mono />
+          </Field>
+        )}
 
         <div className='row'>
           <Button onClick={save} disabled={busy}>
