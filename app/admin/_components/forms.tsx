@@ -1,24 +1,30 @@
 'use client';
 
-// Tiny shared input primitives so the four admin editors all look the same
-// without dragging in a UI library. All controlled — pass `value` + `onChange`.
+// Admin form primitives — re-skinned to use admin.css classes
+// (.input, .select, .textarea, .btn, .badge, .field, .label) so the
+// editor pages render natively in the operations dashboard.
 
 import { ChangeEvent } from 'react';
 
 export function Field({
-  label, hint, children,
-}: { label: string; hint?: string; children: React.ReactNode }) {
+  label, hint, children, required,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+  required?: boolean;
+}) {
   return (
-    <label className='block'>
-      <div className='text-xs uppercase tracking-wide text-white/50'>{label}</div>
-      {hint && <div className='text-xs text-white/40 mt-0.5'>{hint}</div>}
-      <div className='mt-1'>{children}</div>
-    </label>
+    <div className='field'>
+      <label className='label'>
+        {label}
+        {required && <span className='req'>*</span>}
+        {hint && <span className='help'>{hint}</span>}
+      </label>
+      {children}
+    </div>
   );
 }
-
-const inputCls =
-  'w-full rounded border border-white/15 bg-black/30 px-3 py-2 text-sm text-ivory placeholder-white/30 focus:border-gold focus:outline-none';
 
 export function TextInput({
   value, onChange, placeholder, type = 'text',
@@ -31,7 +37,7 @@ export function TextInput({
   return (
     <input
       type={type}
-      className={inputCls}
+      className='input'
       value={value}
       placeholder={placeholder}
       onChange={(e: ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
@@ -42,14 +48,14 @@ export function TextInput({
 export function NumberInput({
   value, onChange, placeholder,
 }: {
-  value: number | '' ;
+  value: number | '';
   onChange: (v: number | '') => void;
   placeholder?: string;
 }) {
   return (
     <input
       type='number'
-      className={inputCls}
+      className='input'
       value={value}
       placeholder={placeholder}
       onChange={(e: ChangeEvent<HTMLInputElement>) => {
@@ -61,19 +67,21 @@ export function NumberInput({
 }
 
 export function TextArea({
-  value, onChange, rows = 4, placeholder,
+  value, onChange, rows = 4, placeholder, mono,
 }: {
   value: string;
   onChange: (v: string) => void;
   rows?: number;
   placeholder?: string;
+  mono?: boolean;
 }) {
   return (
     <textarea
-      className={inputCls + ' font-mono'}
+      className='textarea'
       rows={rows}
       value={value}
       placeholder={placeholder}
+      style={mono ? { fontFamily: 'var(--f-mono)', fontSize: 12 } : undefined}
       onChange={(e: ChangeEvent<HTMLTextAreaElement>) => onChange(e.target.value)}
     />
   );
@@ -88,14 +96,12 @@ export function Select<T extends string>({
 }) {
   return (
     <select
-      className={inputCls}
+      className='select'
       value={value}
       onChange={(e: ChangeEvent<HTMLSelectElement>) => onChange(e.target.value as T)}
     >
       {options.map(o => (
-        <option key={o.value} value={o.value} className='bg-charcoal'>
-          {o.label}
-        </option>
+        <option key={o.value} value={o.value}>{o.label}</option>
       ))}
     </select>
   );
@@ -105,55 +111,60 @@ export function Checkbox({
   checked, onChange, label,
 }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
-    <label className='inline-flex items-center gap-2 text-sm'>
+    <label className='row' style={{ cursor: 'pointer', userSelect: 'none' }}>
       <input
         type='checkbox'
-        className='h-4 w-4 accent-gold'
         checked={checked}
         onChange={e => onChange(e.target.checked)}
       />
-      {label}
+      <span style={{ fontSize: 13 }}>{label}</span>
     </label>
   );
 }
 
 export function Button({
-  children, onClick, type = 'button', variant = 'primary', disabled = false,
+  children, onClick, type = 'button', variant = 'primary', size = 'md', disabled = false,
 }: {
   children: React.ReactNode;
   onClick?: () => void;
   type?: 'button' | 'submit';
-  variant?: 'primary' | 'ghost' | 'danger';
+  variant?: 'primary' | 'ghost' | 'danger' | 'default';
+  size?: 'sm' | 'md';
   disabled?: boolean;
 }) {
-  const base = 'rounded px-3 py-2 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed';
-  const styles = {
-    primary: 'bg-gold text-black hover:bg-gold/80',
-    ghost:   'border border-white/20 text-ivory hover:bg-white/5',
-    danger:  'border border-red-400/40 text-red-300 hover:bg-red-400/10',
-  } as const;
+  const variantClass =
+    variant === 'primary' ? 'btn-primary' :
+    variant === 'ghost'   ? 'btn-ghost' :
+    variant === 'danger'  ? 'btn-danger' : '';
+  const sizeClass = size === 'sm' ? 'btn-sm' : '';
   return (
-    <button type={type} className={`${base} ${styles[variant]}`} onClick={onClick} disabled={disabled}>
+    <button
+      type={type}
+      className={`btn ${variantClass} ${sizeClass}`.trim()}
+      onClick={onClick}
+      disabled={disabled}
+    >
       {children}
     </button>
   );
 }
 
 export function StatusPill({ status }: { status: string }) {
-  const tone =
-    status === 'published' ? 'bg-emerald-500/15 text-emerald-300 border-emerald-400/30' :
-    status === 'draft'     ? 'bg-amber-500/15  text-amber-300  border-amber-400/30' :
-                             'bg-white/5       text-white/70   border-white/15';
-  return (
-    <span className={`inline-block rounded border px-2 py-0.5 text-xs uppercase tracking-wide ${tone}`}>
-      {status}
-    </span>
-  );
+  const kind =
+    status === 'published' ? 'success' :
+    status === 'draft'     ? 'warn' :
+                             'outline';
+  return <span className={`badge badge-${kind}`}>{status}</span>;
 }
 
 export function Toast({ tone, children }: { tone: 'ok' | 'err'; children: React.ReactNode }) {
-  const cls = tone === 'ok'
-    ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200'
-    : 'border-red-400/40 bg-red-500/10 text-red-200';
-  return <div className={`mt-3 rounded border px-3 py-2 text-sm ${cls}`}>{children}</div>;
+  const kind = tone === 'ok' ? 'success' : 'danger';
+  return (
+    <div
+      className={`badge badge-${kind}`}
+      style={{ marginTop: 12, padding: '8px 12px', fontSize: 13, display: 'block' }}
+    >
+      {children}
+    </div>
+  );
 }

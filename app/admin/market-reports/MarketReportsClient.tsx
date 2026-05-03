@@ -111,29 +111,37 @@ export default function MarketReportsClient({ initialRows }: { initialRows: Repo
     setDraft(prev => ({ ...prev, [k]: v }));
 
   return (
-    <div className='mt-6 grid gap-6 md:grid-cols-[300px_1fr]'>
-      <aside className='space-y-2'>
-        <div className='flex items-center justify-between'>
-          <div className='text-xs uppercase tracking-wide text-white/50'>Reports</div>
-          <Button variant='ghost' onClick={startNew}>+ New</Button>
+    <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: 16, alignItems: 'start' }}>
+      <aside className='card' style={{ padding: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 8px 8px' }}>
+          <span className='muted' style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+            Reports
+          </span>
+          <Button variant='ghost' size='sm' onClick={startNew}>+ New</Button>
         </div>
         {rows.length === 0 && (
-          <div className='text-sm text-white/50'>No reports yet — click <em>New</em>.</div>
+          <div className='muted' style={{ fontSize: 13, padding: '0 8px' }}>No reports yet — click <em>New</em>.</div>
         )}
-        <ul className='space-y-1'>
+        <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
           {rows.map(r => (
             <li key={r.id}>
               <button
                 onClick={() => select(r.id)}
-                className={`flex w-full items-center justify-between rounded border px-2 py-1.5 text-left text-sm transition ${
-                  editingId === r.id
-                    ? 'border-gold/60 bg-gold/10 text-ivory'
-                    : 'border-white/10 hover:bg-white/5'
-                }`}
+                className='btn btn-ghost'
+                style={{
+                  width: '100%',
+                  justifyContent: 'space-between',
+                  padding: '8px 10px',
+                  background: editingId === r.id ? 'var(--bg-subtle)' : 'transparent',
+                  borderColor: editingId === r.id ? 'var(--border)' : 'transparent',
+                  textAlign: 'left',
+                }}
               >
-                <span className='truncate'>
-                  <span className='block font-medium'>{r.title}</span>
-                  <span className='block text-xs text-white/50'>{r.period}</span>
+                <span style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'flex-start', minWidth: 0 }}>
+                  <span style={{ fontWeight: 500, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 180 }}>
+                    {r.title}
+                  </span>
+                  <span className='muted' style={{ fontSize: 11 }}>{r.period}</span>
                 </span>
                 <StatusPill status={r.published ? 'published' : 'draft'} />
               </button>
@@ -142,7 +150,7 @@ export default function MarketReportsClient({ initialRows }: { initialRows: Repo
         </ul>
       </aside>
 
-      <section className='space-y-4'>
+      <section className='card' style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
         <Field label='Title'>
           <TextInput value={draft.title} onChange={v => setField('title', v)} placeholder='SMA Q2 2026 Market Report' />
         </Field>
@@ -162,7 +170,7 @@ export default function MarketReportsClient({ initialRows }: { initialRows: Repo
             {busy ? 'Saving…' : editing ? 'Update report' : 'Create report'}
           </Button>
           {editing && (
-            <span className='text-xs text-white/40'>
+            <span className='muted' style={{ fontSize: 12 }}>
               Created {new Date(editing.created_at).toLocaleDateString()}
             </span>
           )}

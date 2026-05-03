@@ -1,1 +1,13 @@
-export default function Page(){return <main className='mx-auto max-w-5xl p-6'><h1 className='text-2xl'>lead-crm</h1><p className='text-white/70 mt-2'>Module placeholder UI for lead-crm.</p><ul className='mt-4 list-disc pl-6 text-sm text-white/70'><li>Supabase table-backed data views</li><li>Mock data fallback before live integration</li><li>TODO: connect Guesty, AirDNA, Pipedrive, and email services where relevant</li></ul></main>}
+import { AdminPlaceholder } from '../_components/AdminPlaceholder';
+
+export default function Page() {
+  return (
+    <AdminPlaceholder
+      crumbs={['Lead CRM']}
+      title='Lead CRM'
+      subtitle='Pipeline view of inbound leads — status, owner, last touch.'
+      icon='leads'
+      action={{ label: 'View leads list →', href: '/admin/leads' }}
+    />
+  );
+}

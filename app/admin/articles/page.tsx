@@ -1,4 +1,5 @@
 import { getSupabaseServerClient } from '@/lib/supabase/server';
+import { Topbar, Icon } from '../AdminShell';
 import ArticlesClient, { type ArticleRow } from './ArticlesClient';
 
 export const dynamic = 'force-dynamic';
@@ -17,13 +18,21 @@ async function loadArticles(): Promise<ArticleRow[]> {
 export default async function Page() {
   const rows = await loadArticles();
   return (
-    <main className='mx-auto max-w-6xl p-6'>
-      <h1 className='text-2xl'>Articles CMS</h1>
-      <p className='mt-2 text-white/70'>
-        Manage the cards on <code className='text-sand'>/insights</code>. Toggle <strong>Published</strong>{' '}
-        to show/hide each article on the public site.
-      </p>
-      <ArticlesClient initialRows={rows} />
-    </main>
+    <div className='main'>
+      <Topbar crumbs={['Insights']}>
+        <button className='btn btn-sm btn-primary'><Icon name='plus' /> New article</button>
+      </Topbar>
+      <div className='page'>
+        <div className='page-head'>
+          <div>
+            <h1 className='page-title'>Insights</h1>
+            <p className='page-subtitle'>
+              Editorial articles published on <code>/insights</code>. Toggle <code>Published</code> to show/hide each.
+            </p>
+          </div>
+        </div>
+        <ArticlesClient initialRows={rows} />
+      </div>
+    </div>
   );
 }

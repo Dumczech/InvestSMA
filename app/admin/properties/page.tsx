@@ -1,6 +1,17 @@
-import { getSupabaseServerClient } from '@/lib/supabase/server';
-export default async function Page(){
-  let count: number | string = 'N/A';
-  try { const supabase=getSupabaseServerClient(); const { count: c } = await supabase.from('properties').select('*',{count:'exact',head:true}); count=c ?? 0; } catch {}
-  return <main className='mx-auto max-w-5xl p-6'><h1 className='text-2xl capitalize'>properties Admin</h1><p className='mt-2 text-white/70'>Total records: {count}</p><p className='text-xs text-white/50 mt-4'>TODO: add create/edit flows, CSV imports, and report downloads.</p></main>
+import { AdminPlaceholder } from '../_components/AdminPlaceholder';
+
+// `Properties` admin top-level — a redirect/index. The real CRUD lives at
+// /admin/property-cms. This page exists for the sidebar nav and offers a
+// shortcut.
+
+export default function Page() {
+  return (
+    <AdminPlaceholder
+      crumbs={['Properties']}
+      title='Properties'
+      subtitle='Manage the public catalog. Editor lives at /admin/property-cms.'
+      icon='home'
+      action={{ label: 'Open Property CMS →', href: '/admin/property-cms' }}
+    />
+  );
 }

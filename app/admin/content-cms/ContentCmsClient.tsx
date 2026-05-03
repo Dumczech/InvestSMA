@@ -6,20 +6,11 @@ import { Button, Field, Select, StatusPill, TextArea, TextInput, Toast } from '.
 type Row = { key: string; value: unknown; status: string; updated_at: string };
 type Status = 'published' | 'draft';
 
-// Well-known keys the homepage reads; we surface them first and offer a
-// quick "create from template" so admins don't need to remember the JSON
-// shape. Anything else (custom keys) still works via the catch-all editor.
+// Well-known keys; quick-fill templates so admins don't have to remember
+// the JSON shape. Anything not listed is editable via the catch-all.
 const KNOWN_KEYS: Array<{ key: string; label: string; template: unknown }> = [
-  {
-    key: 'homepage_hero',
-    label: 'Homepage hero',
-    template: { headline: '', subheadline: '' },
-  },
-  {
-    key: 'homepage_metrics',
-    label: 'Homepage metrics',
-    template: { items: [{ label: '', value: '' }] },
-  },
+  { key: 'homepage_hero', label: 'Homepage hero', template: { headline: '', subheadline: '' } },
+  { key: 'homepage_metrics', label: 'Homepage metrics', template: { items: [{ label: '', value: '' }] } },
   {
     key: 'homepage_market_snapshot',
     label: 'Homepage market snapshot',
@@ -56,7 +47,6 @@ export default function ContentCmsClient({ initialRows }: { initialRows: Row[] }
     [rows, selectedKey],
   );
 
-  // Whenever selection changes, reload the editor with that row's data.
   const selectKey = (k: string) => {
     setSelectedKey(k);
     setToast(null);
@@ -64,7 +54,7 @@ export default function ContentCmsClient({ initialRows }: { initialRows: Row[] }
     if (row) {
       setDraftKey(row.key);
       setDraftJson(JSON.stringify(row.value, null, 2));
-      setDraftStatus((row.status === 'draft' ? 'draft' : 'published'));
+      setDraftStatus(row.status === 'draft' ? 'draft' : 'published');
     }
   };
 
@@ -100,8 +90,6 @@ export default function ContentCmsClient({ initialRows }: { initialRows: Row[] }
       if (!j.ok) throw new Error(j.error || 'Save failed');
       setToast({ tone: 'ok', msg: `Saved ${draftKey}.` });
 
-      // Optimistic update: replace or append the row in local state so the
-      // sidebar reflects the change without a full reload.
       setRows(prev => {
         const next = prev.filter(p => p.key !== draftKey.trim());
         return [
@@ -118,59 +106,78 @@ export default function ContentCmsClient({ initialRows }: { initialRows: Row[] }
   };
 
   return (
-    <div className='mt-6 grid gap-6 md:grid-cols-[260px_1fr]'>
-      <aside className='space-y-2'>
-        <div className='text-xs uppercase tracking-wide text-white/50'>Existing keys</div>
-        {rows.length === 0 && (
-          <div className='text-sm text-white/50'>No rows yet — start with a template below.</div>
-        )}
-        <ul className='space-y-1'>
-          {rows.map(r => (
-            <li key={r.key}>
-              <button
-                onClick={() => selectKey(r.key)}
-                className={`flex w-full items-center justify-between rounded border px-2 py-1.5 text-left text-sm transition ${
-                  selectedKey === r.key
-                    ? 'border-gold/60 bg-gold/10 text-ivory'
-                    : 'border-white/10 hover:bg-white/5'
-                }`}
-              >
-                <span className='truncate'>{r.key}</span>
-                <StatusPill status={r.status} />
-              </button>
-            </li>
-          ))}
-        </ul>
-
-        <div className='pt-3 text-xs uppercase tracking-wide text-white/50'>Templates</div>
-        <ul className='space-y-1'>
-          {KNOWN_KEYS.map(t => {
-            const exists = rows.some(r => r.key === t.key);
-            return (
-              <li key={t.key}>
+    <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 16, alignItems: 'start' }}>
+      {/* Sidebar list */}
+      <aside className='card' style={{ padding: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '4px 8px 8px' }}>
+          <span className='muted' style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+            Existing keys
+          </span>
+          <span className='muted' style={{ fontSize: 11 }}>{rows.length}</span>
+        </div>
+        {rows.length === 0 ? (
+          <div className='muted' style={{ fontSize: 13, padding: '8px 8px 12px' }}>
+            No rows yet — start with a template below.
+          </div>
+        ) : (
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {rows.map(r => (
+              <li key={r.key}>
                 <button
-                  onClick={() => startNew(t)}
-                  className='w-full rounded border border-dashed border-white/15 px-2 py-1.5 text-left text-xs text-white/70 hover:bg-white/5'
+                  onClick={() => selectKey(r.key)}
+                  className='btn btn-ghost'
+                  style={{
+                    width: '100%',
+                    justifyContent: 'space-between',
+                    background: selectedKey === r.key ? 'var(--bg-subtle)' : 'transparent',
+                    borderColor: selectedKey === r.key ? 'var(--border)' : 'transparent',
+                    fontWeight: selectedKey === r.key ? 600 : 500,
+                    padding: '6px 10px',
+                  }}
                 >
-                  {exists ? 'Reset' : '+ New'} · {t.label}
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {r.key}
+                  </span>
+                  <StatusPill status={r.status} />
                 </button>
               </li>
-            );
-          })}
-          <li>
+            ))}
+          </ul>
+        )}
+
+        <div style={{ borderTop: '1px solid var(--border)', marginTop: 12, paddingTop: 12 }}>
+          <div className='muted' style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', padding: '0 8px 8px' }}>
+            Templates
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {KNOWN_KEYS.map(t => {
+              const exists = rows.some(r => r.key === t.key);
+              return (
+                <button
+                  key={t.key}
+                  onClick={() => startNew(t)}
+                  className='btn btn-ghost btn-sm'
+                  style={{ justifyContent: 'flex-start' }}
+                >
+                  {exists ? '↻' : '+'} {t.label}
+                </button>
+              );
+            })}
             <button
               onClick={() => startNew()}
-              className='w-full rounded border border-dashed border-white/15 px-2 py-1.5 text-left text-xs text-white/70 hover:bg-white/5'
+              className='btn btn-ghost btn-sm'
+              style={{ justifyContent: 'flex-start' }}
             >
               + Custom key
             </button>
-          </li>
-        </ul>
+          </div>
+        </div>
       </aside>
 
-      <section className='space-y-4'>
-        <div className='grid gap-3 md:grid-cols-[1fr_180px]'>
-          <Field label='Key' hint='snake_case identifier; uniquely names this content block'>
+      {/* Editor */}
+      <section className='card' style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div className='grid-2'>
+          <Field label='Key' hint='snake_case identifier'>
             <TextInput value={draftKey} onChange={setDraftKey} placeholder='homepage_hero' />
           </Field>
           <Field label='Status'>
@@ -179,22 +186,22 @@ export default function ContentCmsClient({ initialRows }: { initialRows: Row[] }
               onChange={setDraftStatus}
               options={[
                 { value: 'published', label: 'Published' },
-                { value: 'draft',     label: 'Draft' },
+                { value: 'draft', label: 'Draft' },
               ]}
             />
           </Field>
         </div>
 
-        <Field label='Value (JSON)' hint='Free-form JSON; structure depends on the key'>
-          <TextArea value={draftJson} onChange={setDraftJson} rows={20} />
+        <Field label='Value (JSON)' hint='Free-form; structure varies per key'>
+          <TextArea value={draftJson} onChange={setDraftJson} rows={20} mono />
         </Field>
 
-        <div className='flex items-center gap-2'>
+        <div className='row'>
           <Button onClick={save} disabled={busy}>
             {busy ? 'Saving…' : selected ? 'Update' : 'Create'}
           </Button>
           {selected && (
-            <span className='text-xs text-white/40'>
+            <span className='muted' style={{ fontSize: 12 }}>
               Last updated {new Date(selected.updated_at).toLocaleString()}
             </span>
           )}

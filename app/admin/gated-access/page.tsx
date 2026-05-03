@@ -1,1 +1,12 @@
-export default function Page(){return <main className='mx-auto max-w-5xl p-6'><h1 className='text-2xl'>gated-access</h1><p className='text-white/70 mt-2'>Module placeholder UI for gated-access.</p><ul className='mt-4 list-disc pl-6 text-sm text-white/70'><li>Supabase table-backed data views</li><li>Mock data fallback before live integration</li><li>TODO: connect Guesty, AirDNA, Pipedrive, and email services where relevant</li></ul></main>}
+import { AdminPlaceholder } from '../_components/AdminPlaceholder';
+
+export default function Page() {
+  return (
+    <AdminPlaceholder
+      crumbs={['Gated Access']}
+      title='Gated Access'
+      subtitle='Investor access grants — who can see off-market memos, full reports, etc. Pulls from gated_access_grants.'
+      icon='link'
+    />
+  );
+}

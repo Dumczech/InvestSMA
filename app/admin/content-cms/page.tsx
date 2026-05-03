@@ -1,8 +1,7 @@
 import { getSupabaseServerClient } from '@/lib/supabase/server';
+import { Topbar, Icon } from '../AdminShell';
 import ContentCmsClient from './ContentCmsClient';
 
-// Server component: pull every site_content row, hand to the client editor.
-// `force-dynamic` so admin always sees the latest, never cached.
 export const dynamic = 'force-dynamic';
 
 type Row = { key: string; value: unknown; status: string; updated_at: string };
@@ -24,14 +23,27 @@ async function loadRows(): Promise<Row[]> {
 export default async function Page() {
   const rows = await loadRows();
   return (
-    <main className='mx-auto max-w-5xl p-6'>
-      <h1 className='text-2xl'>Content CMS</h1>
-      <p className='mt-2 text-white/70'>
-        Edit homepage hero, metrics, market snapshot, and any other site content blocks.
-        Each row is a JSON value keyed by name; the public site reads these via{' '}
-        <code className='text-sand'>getHomepageContent()</code>.
-      </p>
-      <ContentCmsClient initialRows={rows} />
-    </main>
+    <div className='main'>
+      <Topbar crumbs={['Site Content']} />
+      <div className='page'>
+        <div className='page-head'>
+          <div>
+            <h1 className='page-title'>Site Content</h1>
+            <p className='page-subtitle'>
+              JSON content blocks consumed by the public site (homepage hero, market snapshot,
+              gated CTA, contact copy, ROI labels, legal disclosures, &amp; more). Edits go live
+              on next render.
+            </p>
+          </div>
+          <div className='page-actions'>
+            <span className='muted' style={{ fontSize: 12 }}>
+              <Icon name='info' style={{ width: 12, height: 12, marginRight: 4 }} />
+              Each row = one <code>site_content</code> key
+            </span>
+          </div>
+        </div>
+        <ContentCmsClient initialRows={rows} />
+      </div>
+    </div>
   );
 }
