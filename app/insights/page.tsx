@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getPublishedPosts, type PostMeta } from '@/lib/data/posts';
+import { getInsightsCopy, type InsightsCopy } from '@/lib/data/editorial';
 import { Disclaimer, StickyCTA } from '@/components/site';
 
 export const dynamic = 'force-dynamic';
@@ -15,21 +16,21 @@ const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
 
 export default async function InsightsPage() {
-  const posts = await getPublishedPosts();
+  const [posts, copy] = await Promise.all([getPublishedPosts(), getInsightsCopy()]);
   const featured = posts.slice(0, 2); // first 2 sorted-by-date posts get featured treatment
   return (
     <div className='doc-page' data-screen-label='Insights'>
-      <Hero />
-      <Featured posts={featured} />
-      <PostGrid posts={posts} />
-      <GatedDownload />
+      <Hero copy={copy} />
+      <Featured posts={featured} copy={copy} />
+      <PostGrid posts={posts} copy={copy} />
+      <GatedDownload copy={copy} />
       <Disclaimer />
       <StickyCTA label='Subscribe to weekly briefing' cta='Subscribe' href='/contact' />
     </div>
   );
 }
 
-function Hero() {
+function Hero({ copy }: { copy: InsightsCopy }) {
   return (
     <section
       className='surface-dark'
@@ -41,7 +42,7 @@ function Hero() {
           className='hero-grid'
         >
           <div>
-            <div className='lead-num' style={{ color: '#C9A55A' }}>Field Notes</div>
+            <div className='lead-num' style={{ color: '#C9A55A' }}>{copy.hero_eyebrow}</div>
             <h1
               className='display'
               style={{
@@ -51,9 +52,9 @@ function Hero() {
                 lineHeight: 0.98,
               }}
             >
-              Insights
+              {copy.hero_headline_pre}
               <br />
-              <span className='display-italic' style={{ color: '#D9CFB8' }}>from the field.</span>
+              <span className='display-italic' style={{ color: '#D9CFB8' }}>{copy.hero_headline_italic}</span>
             </h1>
             <p
               style={{
@@ -64,8 +65,7 @@ function Hero() {
                 maxWidth: 540,
               }}
             >
-              Quarterly market reports, buyer education, tax guidance, case studies. Written by
-              the LRM acquisition team — published every two weeks.
+              {copy.hero_paragraph}
             </p>
           </div>
           <form
@@ -75,7 +75,7 @@ function Hero() {
             <input
               type='email'
               name='email'
-              placeholder='your@email.com'
+              placeholder={copy.subscribe_placeholder}
               style={{
                 background: 'rgba(245,239,226,0.05)',
                 border: '1px solid rgba(245,239,226,0.2)',
@@ -87,7 +87,7 @@ function Hero() {
                 outline: 'none',
               }}
             />
-            <button className='btn btn-gold' type='submit'>Subscribe →</button>
+            <button className='btn btn-gold' type='submit'>{copy.subscribe_label}</button>
           </form>
         </div>
       </div>
@@ -95,12 +95,12 @@ function Hero() {
   );
 }
 
-function Featured({ posts }: { posts: PostMeta[] }) {
+function Featured({ posts, copy }: { posts: PostMeta[]; copy: InsightsCopy }) {
   if (!posts.length) return null;
   return (
     <section style={{ background: '#FBF8F0', padding: '64px 0 32px' }}>
       <div className='container'>
-        <div className='data-label' style={{ marginBottom: 24 }}>Featured this week</div>
+        <div className='data-label' style={{ marginBottom: 24 }}>{copy.featured_label}</div>
         <div
           style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 24 }}
           className='featured-grid'
@@ -167,12 +167,12 @@ function FeaturedCard({ p }: { p: PostMeta }) {
   );
 }
 
-function PostGrid({ posts }: { posts: PostMeta[] }) {
+function PostGrid({ posts, copy }: { posts: PostMeta[]; copy: InsightsCopy }) {
   if (!posts.length) {
     return (
       <section style={{ background: '#FBF8F0', padding: '48px 0 100px' }}>
         <div className='container'>
-          <div className='lede'>No published insights yet — apply the seed migration to surface 9 designed posts.</div>
+          <div className='lede'>{copy.empty_state}</div>
         </div>
       </section>
     );
@@ -246,7 +246,7 @@ function PostCard({ p }: { p: PostMeta }) {
   );
 }
 
-function GatedDownload() {
+function GatedDownload({ copy }: { copy: InsightsCopy }) {
   return (
     <section
       className='surface-dark'
@@ -258,7 +258,7 @@ function GatedDownload() {
           className='gated-grid'
         >
           <div>
-            <div className='lead-num' style={{ color: '#C9A55A' }}>Gated · Free</div>
+            <div className='lead-num' style={{ color: '#C9A55A' }}>{copy.gated_eyebrow}</div>
             <h2
               className='display'
               style={{
@@ -267,17 +267,16 @@ function GatedDownload() {
                 lineHeight: 0.98,
               }}
             >
-              The 52-page Q1
+              {copy.gated_title_pre}
               <br />
-              <span className='display-italic' style={{ color: '#D9CFB8' }}>SMA Market Report.</span>
+              <span className='display-italic' style={{ color: '#D9CFB8' }}>{copy.gated_title_italic}</span>
             </h2>
             <p style={{ fontSize: 16, lineHeight: 1.6, opacity: 0.78, maxWidth: 520 }}>
-              Full neighborhood-by-neighborhood ADR breakdown, transaction comps, regulatory
-              outlook, and a 2027 forecast. Sent as PDF.
+              {copy.gated_paragraph}
             </p>
           </div>
           <Link href='/contact?intent=report' className='btn btn-gold' style={{ justifySelf: 'end' }}>
-            Download Free →
+            {copy.gated_cta_label}
           </Link>
         </div>
       </div>

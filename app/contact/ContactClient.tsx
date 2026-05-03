@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import type { ContactCopy } from '@/lib/data/editorial';
 
 // Faithful port of design5/.../contact.jsx — 3-step investor access form.
 // Submits to the existing /api/leads endpoint (PR #6+); falls back to
@@ -37,7 +38,52 @@ const DEFAULT_OPTIONS: ContactOptions = {
   timelines: ['0–3 mo', '3–6 mo', '6–12 mo', '12+ mo', 'Researching'],
 };
 
-export default function ContactClient({ options = DEFAULT_OPTIONS }: { options?: ContactOptions }) {
+const DEFAULT_COPY: ContactCopy = {
+  hero_eyebrow: 'Investor Access · Application',
+  hero_headline_pre: 'Apply for',
+  hero_headline_italic: 'investor access.',
+  hero_paragraph:
+    "We work with a limited number of investors per quarter. Tell us about your goals — we'll respond within 24 hours.",
+  hero_stats: [
+    { v: '24h', l: 'Avg response' },
+    { v: '47', l: 'Active investors' },
+    { v: '$2.4B', l: 'AUM' },
+  ],
+  step_1_eyebrow: 'Step 01 of 03',
+  step_1_title: 'Tell us who you are.',
+  step_1_label_name: 'Full name',
+  step_1_label_email: 'Email',
+  step_1_label_phone: 'Phone',
+  step_2_eyebrow: 'Step 02 of 03',
+  step_2_title: 'Investment profile.',
+  step_2_label_budget: 'Budget range',
+  step_2_label_timeline: 'Buying timeline',
+  step_3_eyebrow: 'Step 03 of 03',
+  step_3_title: 'What are you looking for?',
+  step_3_label_interests: 'Interests · select all',
+  step_3_label_message: 'Anything else? (optional)',
+  step_3_message_placeholder: 'Specific neighborhoods, must-have features, or context we should know...',
+  submit_label: 'Request Investor Access →',
+  submit_footnote: 'Reviewed within 24h · No broker referrals · Discretion guaranteed',
+  trust_signals: [
+    { t: 'No broker referrals', d: 'Your information stays with the LRM acquisition team. We never sell or share leads.' },
+    { t: '24-hour response', d: 'A real human responds within one business day. Not a drip sequence.' },
+    { t: 'Off-market access', d: 'Verified investors see 14 properties not listed on the public catalog.' },
+  ],
+  submitted_title: 'Application received.',
+  submitted_paragraph:
+    'Our acquisition team will review and respond within 24 hours. Check your inbox for next steps.',
+  submitted_cta_browse_label: 'Browse Properties',
+  submitted_cta_market_label: 'See Market Data',
+};
+
+export default function ContactClient({
+  options = DEFAULT_OPTIONS,
+  copy = DEFAULT_COPY,
+}: {
+  options?: ContactOptions;
+  copy?: ContactCopy;
+}) {
   const { interests: INTERESTS, budgets: BUDGETS, timelines: TIMELINES } = options;
   const [step, setStep] = useState(1);
   const [submitted, setSubmitted] = useState(false);
@@ -117,7 +163,7 @@ export default function ContactClient({ options = DEFAULT_OPTIONS }: { options?:
               lineHeight: 0.98,
             }}
           >
-            Application received.
+            {copy.submitted_title}
           </h1>
           <p
             style={{
@@ -128,17 +174,16 @@ export default function ContactClient({ options = DEFAULT_OPTIONS }: { options?:
               lineHeight: 1.6,
             }}
           >
-            Our acquisition team will review and respond within 24 hours. Check your inbox for next
-            steps.
+            {copy.submitted_paragraph}
           </p>
           <div style={{ marginTop: 48, display: 'inline-flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
-            <Link href='/properties' className='btn btn-gold'>Browse Properties</Link>
+            <Link href='/properties' className='btn btn-gold'>{copy.submitted_cta_browse_label}</Link>
             <Link
               href='/market-data'
               className='btn btn-ghost'
               style={{ color: '#F5EFE2', borderColor: 'rgba(245,239,226,0.3)' }}
             >
-              See Market Data
+              {copy.submitted_cta_market_label}
             </Link>
           </div>
         </div>
@@ -159,7 +204,7 @@ export default function ContactClient({ options = DEFAULT_OPTIONS }: { options?:
             className='hero-grid'
           >
             <div>
-              <div className='lead-num' style={{ color: '#C9A55A' }}>Investor Access · Application</div>
+              <div className='lead-num' style={{ color: '#C9A55A' }}>{copy.hero_eyebrow}</div>
               <h1
                 className='display'
                 style={{
@@ -169,9 +214,9 @@ export default function ContactClient({ options = DEFAULT_OPTIONS }: { options?:
                   lineHeight: 0.98,
                 }}
               >
-                Apply for
+                {copy.hero_headline_pre}
                 <br />
-                <span className='display-italic' style={{ color: '#D9CFB8' }}>investor access.</span>
+                <span className='display-italic' style={{ color: '#D9CFB8' }}>{copy.hero_headline_italic}</span>
               </h1>
               <p
                 style={{
@@ -182,16 +227,11 @@ export default function ContactClient({ options = DEFAULT_OPTIONS }: { options?:
                   maxWidth: 540,
                 }}
               >
-                We work with a limited number of investors per quarter. Tell us about your goals —
-                we&apos;ll respond within 24 hours.
+                {copy.hero_paragraph}
               </p>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
-              {[
-                { v: '24h', l: 'Avg response' },
-                { v: '47', l: 'Active investors' },
-                { v: '$2.4B', l: 'AUM' },
-              ].map((s, i) => (
+              {copy.hero_stats.map((s, i) => (
                 <div key={i}>
                   <div className='display tnum' style={{ fontSize: 28, color: '#C9A55A' }}>{s.v}</div>
                   <div className='data-label' style={{ marginTop: 4 }}>{s.l}</div>
@@ -237,13 +277,13 @@ export default function ContactClient({ options = DEFAULT_OPTIONS }: { options?:
           >
             {step === 1 && (
               <div>
-                <div className='data-label'>Step 01 of 03</div>
+                <div className='data-label'>{copy.step_1_eyebrow}</div>
                 <div className='display' style={{ fontSize: 40, marginTop: 8, marginBottom: 32 }}>
-                  Tell us who you are.
+                  {copy.step_1_title}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
                   <div className='field-group'>
-                    <label className='field-label'>Full name</label>
+                    <label className='field-label'>{copy.step_1_label_name}</label>
                     <input
                       className='field-input'
                       value={form.name}
@@ -253,7 +293,7 @@ export default function ContactClient({ options = DEFAULT_OPTIONS }: { options?:
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32 }}>
                     <div className='field-group'>
-                      <label className='field-label'>Email</label>
+                      <label className='field-label'>{copy.step_1_label_email}</label>
                       <input
                         type='email'
                         className='field-input'
@@ -263,7 +303,7 @@ export default function ContactClient({ options = DEFAULT_OPTIONS }: { options?:
                       />
                     </div>
                     <div className='field-group'>
-                      <label className='field-label'>Phone</label>
+                      <label className='field-label'>{copy.step_1_label_phone}</label>
                       <input
                         type='tel'
                         className='field-input'
@@ -288,14 +328,14 @@ export default function ContactClient({ options = DEFAULT_OPTIONS }: { options?:
 
             {step === 2 && (
               <div>
-                <div className='data-label'>Step 02 of 03</div>
+                <div className='data-label'>{copy.step_2_eyebrow}</div>
                 <div className='display' style={{ fontSize: 40, marginTop: 8, marginBottom: 32 }}>
-                  Investment profile.
+                  {copy.step_2_title}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 40 }}>
                   <div>
                     <label className='field-label' style={{ marginBottom: 16, display: 'block' }}>
-                      Budget range
+                      {copy.step_2_label_budget}
                     </label>
                     <div
                       style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}
@@ -324,7 +364,7 @@ export default function ContactClient({ options = DEFAULT_OPTIONS }: { options?:
                   </div>
                   <div>
                     <label className='field-label' style={{ marginBottom: 16, display: 'block' }}>
-                      Buying timeline
+                      {copy.step_2_label_timeline}
                     </label>
                     <div
                       style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}
@@ -371,14 +411,14 @@ export default function ContactClient({ options = DEFAULT_OPTIONS }: { options?:
 
             {step === 3 && (
               <div>
-                <div className='data-label'>Step 03 of 03</div>
+                <div className='data-label'>{copy.step_3_eyebrow}</div>
                 <div className='display' style={{ fontSize: 40, marginTop: 8, marginBottom: 32 }}>
-                  What are you looking for?
+                  {copy.step_3_title}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 40 }}>
                   <div>
                     <label className='field-label' style={{ marginBottom: 16, display: 'block' }}>
-                      Interests · select all
+                      {copy.step_3_label_interests}
                     </label>
                     <div
                       style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}
@@ -410,12 +450,12 @@ export default function ContactClient({ options = DEFAULT_OPTIONS }: { options?:
                     </div>
                   </div>
                   <div className='field-group'>
-                    <label className='field-label'>Anything else? (optional)</label>
+                    <label className='field-label'>{copy.step_3_label_message}</label>
                     <textarea
                       className='field-textarea'
                       value={form.message}
                       onChange={e => setForm(s => ({ ...s, message: e.target.value }))}
-                      placeholder='Specific neighborhoods, must-have features, or context we should know...'
+                      placeholder={copy.step_3_message_placeholder}
                     />
                   </div>
                 </div>
@@ -428,7 +468,7 @@ export default function ContactClient({ options = DEFAULT_OPTIONS }: { options?:
                     onClick={submit}
                     disabled={form.interests.length === 0 || busy}
                   >
-                    {busy ? 'Submitting…' : 'Request Investor Access →'}
+                    {busy ? 'Submitting…' : copy.submit_label}
                   </button>
                 </div>
                 <div
@@ -442,7 +482,7 @@ export default function ContactClient({ options = DEFAULT_OPTIONS }: { options?:
                     marginTop: 24,
                   }}
                 >
-                  Reviewed within 24h · No broker referrals · Discretion guaranteed
+                  {copy.submit_footnote}
                 </div>
               </div>
             )}
@@ -460,20 +500,7 @@ export default function ContactClient({ options = DEFAULT_OPTIONS }: { options?:
             }}
             className='trust-grid'
           >
-            {[
-              {
-                t: 'No broker referrals',
-                d: 'Your information stays with the LRM acquisition team. We never sell or share leads.',
-              },
-              {
-                t: '24-hour response',
-                d: 'A real human responds within one business day. Not a drip sequence.',
-              },
-              {
-                t: 'Off-market access',
-                d: 'Verified investors see 14 properties not listed on the public catalog.',
-              },
-            ].map((x, i) => (
+            {copy.trust_signals.map((x, i) => (
               <div key={i}>
                 <div className='display' style={{ fontSize: 18 }}>{x.t}</div>
                 <p style={{ fontSize: 13, color: '#3A362F', lineHeight: 1.6, marginTop: 8 }}>

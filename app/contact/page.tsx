@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { Disclaimer } from '@/components/site';
-import { getContactFormOptions } from '@/lib/data/editorial';
+import { getContactFormOptions, getContactCopy } from '@/lib/data/editorial';
 import ContactClient from './ContactClient';
 
 export const metadata: Metadata = {
@@ -10,10 +10,10 @@ export const metadata: Metadata = {
 };
 
 export default async function ContactPage() {
-  const opts = await getContactFormOptions();
+  const [opts, copy] = await Promise.all([getContactFormOptions(), getContactCopy()]);
   return (
     <div className='doc-page' data-screen-label='Contact'>
-      <ContactClient options={opts} />
+      <ContactClient options={opts} copy={copy} />
       <Disclaimer />
     </div>
   );

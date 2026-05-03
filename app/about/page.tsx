@@ -1,7 +1,12 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Disclaimer, StickyCTA } from '@/components/site';
-import { getAboutContent, type AboutContent } from '@/lib/data/editorial';
+import {
+  getAboutContent,
+  getAboutCopy,
+  type AboutContent,
+  type AboutCopy,
+} from '@/lib/data/editorial';
 
 export const metadata: Metadata = {
   title: 'About · InvestSMA',
@@ -10,20 +15,20 @@ export const metadata: Metadata = {
 };
 
 export default async function AboutPage() {
-  const content = await getAboutContent();
+  const [content, copy] = await Promise.all([getAboutContent(), getAboutCopy()]);
   return (
     <div className='doc-page' data-screen-label='About'>
-      <Hero stats={content.stats} />
-      <AreNotAre are_not={content.are_not} are={content.are} />
-      <OperationsStack stack={content.stack} />
-      <ClosingCta />
+      <Hero stats={content.stats} copy={copy} />
+      <AreNotAre are_not={content.are_not} are={content.are} copy={copy} />
+      <OperationsStack stack={content.stack} copy={copy} />
+      <ClosingCta copy={copy} />
       <Disclaimer />
       <StickyCTA label='Talk to the LRM team' cta='Request Access' href='/contact' />
     </div>
   );
 }
 
-function Hero({ stats }: { stats: AboutContent['stats'] }) {
+function Hero({ stats, copy }: { stats: AboutContent['stats']; copy: AboutCopy }) {
   return (
     <section
       className='surface-dark'
@@ -53,9 +58,9 @@ function Hero({ stats }: { stats: AboutContent['stats'] }) {
             gap: 12,
           }}
         >
-          <span>§ About InvestSMA</span>
-          <span>Operators · not brokers</span>
-          <span>Est. via Luxury Rental Mgmt</span>
+          {copy.topbar.map((t, i) => (
+            <span key={i}>{t}</span>
+          ))}
         </div>
 
         <div
@@ -70,7 +75,7 @@ function Hero({ stats }: { stats: AboutContent['stats'] }) {
           className='hero-grid'
         >
           <div>
-            <div className='lead-num' style={{ color: '#C9A55A' }}>About · 01</div>
+            <div className='lead-num' style={{ color: '#C9A55A' }}>{copy.hero_eyebrow}</div>
             <h1
               className='display'
               style={{
@@ -78,22 +83,18 @@ function Hero({ stats }: { stats: AboutContent['stats'] }) {
                 margin: '20px 0 0',
                 letterSpacing: '-0.025em',
                 lineHeight: 0.94,
+                whiteSpace: 'pre-line',
               }}
             >
-              We don&apos;t help you
-              <br />
-              buy property.
-              <br />
+              {copy.hero_headline_pre}
               <span className='display-italic' style={{ color: '#C9A55A' }}>
-                We help you build a performing asset.
+                {copy.hero_headline_italic}
               </span>
             </h1>
           </div>
           <div>
             <p style={{ fontSize: 18, lineHeight: 1.6, color: 'rgba(245,239,226,0.82)' }}>
-              Most opportunities in San Miguel look good on paper. Few are structured, positioned,
-              and operated in a way that delivers what investors expect. That gap — between a
-              clean acquisition and a performing asset — is what we close.
+              {copy.hero_paragraph}
             </p>
             <div style={{ marginTop: 32, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
               {stats.map((s, i) => (
@@ -113,18 +114,20 @@ function Hero({ stats }: { stats: AboutContent['stats'] }) {
 function AreNotAre({
   are_not,
   are,
+  copy,
 }: {
   are_not: AboutContent['are_not'];
   are: AboutContent['are'];
+  copy: AboutCopy;
 }) {
   return (
     <section style={{ background: '#FBF8F0', padding: '120px 0' }}>
       <div className='container'>
         <div className='section-head'>
           <div>
-            <div className='lead-num'>02 · Positioning</div>
+            <div className='lead-num'>{copy.positioning_eyebrow}</div>
             <h2>
-              What we <span className='display-italic' style={{ color: '#1F3A2E' }}>are</span> and aren&apos;t.
+              {copy.positioning_title_pre}<span className='display-italic' style={{ color: '#1F3A2E' }}>{copy.positioning_title_italic}</span>{copy.positioning_title_post}
             </h2>
           </div>
           <p className='lede' />
@@ -134,7 +137,7 @@ function AreNotAre({
           <div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 24 }}>
               <span className='mono tnum' style={{ fontSize: 11, color: '#8B6F47', letterSpacing: '0.12em' }}>
-                WE ARE NOT
+                {copy.are_not_label}
               </span>
               <span style={{ flex: 1, height: 1, background: 'rgba(20,19,15,0.15)' }} />
             </div>
@@ -182,7 +185,7 @@ function AreNotAre({
           <div className='surface-dark' style={{ background: '#14130F', color: '#F5EFE2', padding: 32, marginTop: -8 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 24 }}>
               <span className='mono tnum' style={{ fontSize: 11, color: '#C9A55A', letterSpacing: '0.12em' }}>
-                WE ARE
+                {copy.are_label}
               </span>
               <span style={{ flex: 1, height: 1, background: 'rgba(245,239,226,0.2)' }} />
             </div>
@@ -219,22 +222,21 @@ function AreNotAre({
   );
 }
 
-function OperationsStack({ stack }: { stack: AboutContent['stack'] }) {
+function OperationsStack({ stack, copy }: { stack: AboutContent['stack']; copy: AboutCopy }) {
   return (
     <section className='surface-dark' style={{ background: '#14130F', color: '#F5EFE2', padding: '120px 0' }}>
       <div className='container'>
         <div className='section-head' style={{ borderBottom: '1px solid rgba(245,239,226,0.12)', paddingBottom: 56 }}>
           <div>
-            <div className='lead-num' style={{ color: '#C9A55A' }}>03 · Operations stack</div>
+            <div className='lead-num' style={{ color: '#C9A55A' }}>{copy.stack_eyebrow}</div>
             <h2 style={{ color: '#F5EFE2' }}>
-              Four phases.
+              {copy.stack_title_pre}
               <br />
-              <span className='display-italic' style={{ color: '#D9CFB8' }}>One operator.</span>
+              <span className='display-italic' style={{ color: '#D9CFB8' }}>{copy.stack_title_italic}</span>
             </h2>
           </div>
           <p className='lede' style={{ color: 'rgba(245,239,226,0.7)' }}>
-            From acquisition to exit, the same team — and the same data — runs every phase.
-            That&apos;s how we keep the projection-to-reality variance below 8%.
+            {copy.stack_lede}
           </p>
         </div>
 
@@ -276,7 +278,7 @@ function OperationsStack({ stack }: { stack: AboutContent['stack'] }) {
   );
 }
 
-function ClosingCta() {
+function ClosingCta({ copy }: { copy: AboutCopy }) {
   return (
     <section style={{ background: '#FBF8F0', padding: '120px 0' }}>
       <div className='container'>
@@ -285,7 +287,7 @@ function ClosingCta() {
           className='closing-grid'
         >
           <div>
-            <div className='lead-num'>04 · Next step</div>
+            <div className='lead-num'>{copy.closing_eyebrow}</div>
             <h2
               className='display'
               style={{
@@ -293,20 +295,19 @@ function ClosingCta() {
                 margin: '12px 0 24px',
                 lineHeight: 0.98,
                 letterSpacing: '-0.025em',
+                whiteSpace: 'pre-line',
               }}
             >
-              The portfolio is small
-              <br />
-              <span className='display-italic' style={{ color: '#1F3A2E' }}>by design.</span>
+              {copy.closing_title_pre}
+              <span className='display-italic' style={{ color: '#1F3A2E' }}>{copy.closing_title_italic}</span>
             </h2>
             <p style={{ fontSize: 16, lineHeight: 1.6, color: '#2A2722', maxWidth: 540 }}>
-              We add roughly one investor per quarter. Tell us what you&apos;re looking for and
-              we&apos;ll respond within 24 hours.
+              {copy.closing_paragraph}
             </p>
           </div>
           <div style={{ display: 'flex', gap: 12, justifySelf: 'end', flexWrap: 'wrap' }}>
-            <Link href='/contact' className='btn btn-primary'>Apply for access →</Link>
-            <Link href='/insights' className='btn btn-ghost'>Read our notes</Link>
+            <Link href='/contact' className='btn btn-primary'>{copy.closing_cta_apply_label}</Link>
+            <Link href='/insights' className='btn btn-ghost'>{copy.closing_cta_read_label}</Link>
           </div>
         </div>
       </div>
