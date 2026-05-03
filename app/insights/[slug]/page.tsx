@@ -6,6 +6,10 @@ import { Disclaimer, StickyCTA } from '@/components/site';
 
 export const dynamic = 'force-dynamic';
 
+// Site origin used in SEO metadata + JSON-LD. Override via env at deploy
+// time; falls back to the production domain.
+const SITE_ORIGIN = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.investsanmiguel.com').replace(/\/$/, '');
+
 // Format dates for the design's "Apr 18, 2026" header.
 const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit' });
@@ -18,9 +22,38 @@ export async function generateMetadata({
   const { slug } = await params;
   const post = await getPostBySlug(slug);
   if (!post) return { title: 'Insight not found · InvestSMA' };
+
+  const url = `${SITE_ORIGIN}/insights/${slug}`;
+  const description = post.deck || post.excerpt || post.title;
+  const ogImage = `${SITE_ORIGIN}/og-default.jpg`;
+
   return {
     title: `${post.title} · InvestSMA`,
-    description: post.deck || post.excerpt,
+    description,
+    keywords: [
+      post.category,
+      'San Miguel de Allende',
+      'SMA investment',
+      'luxury rental',
+      'real estate Mexico',
+    ].join(', '),
+    alternates: { canonical: url },
+    openGraph: {
+      title: post.title,
+      description,
+      url,
+      siteName: 'InvestSMA',
+      type: 'article',
+      publishedTime: post.date,
+      authors: [post.author],
+      images: [{ url: ogImage }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: post.title,
+      description,
+      images: [ogImage],
+    },
   };
 }
 
@@ -32,6 +65,40 @@ export default async function PostDetailPage({
   const { slug } = await params;
   const post = await getPostBySlug(slug);
   if (!post) notFound();
+
+  const url = `${SITE_ORIGIN}/insights/${slug}`;
+  const description = post.deck || post.excerpt || post.title;
+  const articleSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    '@id': url,
+    headline: post.title,
+    description,
+    image: `${SITE_ORIGIN}/og-default.jpg`,
+    datePublished: post.date,
+    dateModified: post.date,
+    author: {
+      '@type': 'Person',
+      name: post.author,
+      ...(post.authorRole ? { jobTitle: post.authorRole } : {}),
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'InvestSMA',
+      logo: { '@type': 'ImageObject', url: `${SITE_ORIGIN}/og-default.jpg` },
+    },
+    articleSection: post.category,
+    mainEntityOfPage: { '@type': 'WebPage', '@id': url },
+  };
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_ORIGIN}/` },
+      { '@type': 'ListItem', position: 2, name: 'Insights', item: `${SITE_ORIGIN}/insights` },
+      { '@type': 'ListItem', position: 3, name: post.title, item: url },
+    ],
+  };
 
   const related = await getRelatedPostsByIds(post.related);
   const initials = post.author
@@ -46,6 +113,17 @@ export default async function PostDetailPage({
 
   return (
     <div className='doc-page' data-screen-label={`Post-${slug}`}>
+      {/* JSON-LD: Article + BreadcrumbList. Inlined so it ships in the
+          server-rendered HTML where crawlers can read it. */}
+      <script
+        type='application/ld+json'
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
+      />
+      <script
+        type='application/ld+json'
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
+
       {/* ===== HERO ===== */}
       <section
         className='surface-dark'
