@@ -1,5 +1,28 @@
-import { PropertyCard, SectionHeader } from '@/components/site';
 import { Metadata } from 'next';
 import { getPublishedProperties } from '@/lib/data/cms';
-export const metadata: Metadata = {title:'Featured Properties | InvestSMA',description:'San Miguel de Allende vacation rental investment opportunities with investment memo analysis.'};
-export default async function Properties(){const properties=await getPublishedProperties(); return <main className='mx-auto max-w-6xl p-6'><SectionHeader title='Featured Investment Properties' subtitle='High-conviction luxury homes and hospitality assets.'/><div className='grid gap-4 md:grid-cols-2'>{properties.map(p=><PropertyCard key={p.slug} p={p}/>)}</div></main>}
+import { Disclaimer, StickyCTA } from '@/components/site';
+import PropertiesClient from './PropertiesClient';
+
+export const metadata: Metadata = {
+  title: 'Featured Investment Properties — San Miguel de Allende | InvestSMA',
+  description:
+    'Curated luxury rental investment properties in San Miguel de Allende — Centro, Atascadero, San Antonio, Los Frailes, El Chorro. Each with full investment memo.',
+  keywords: [
+    'San Miguel de Allende investment properties',
+    'SMA luxury homes for sale',
+    'Centro Histórico real estate',
+    'Atascadero homes',
+    'vacation rental investment Mexico',
+  ].join(', '),
+};
+
+export default async function PropertiesPage() {
+  const properties = await getPublishedProperties();
+  return (
+    <div className='doc-page' data-screen-label='Properties'>
+      <PropertiesClient properties={properties} />
+      <Disclaimer />
+      <StickyCTA label='See off-market deals' cta='Request Access' href='/contact' />
+    </div>
+  );
+}
