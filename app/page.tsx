@@ -3,6 +3,17 @@ import Link from 'next/link';
 import { getPublishedProperties } from '@/lib/data/cms';
 import { getPublishedPosts } from '@/lib/data/posts';
 import {
+  getHomepageHeroImage,
+  getHomepageCredibility,
+  getHomepageVideos,
+  getHomepageOccupancyChart,
+  getHomepageNbhdComparison,
+  type CredibilityStat,
+  type VideoTile,
+  type OccupancyChart as OccupancyChartData,
+  type NbhdComparisonRow,
+} from '@/lib/data/editorial';
+import {
   Disclaimer,
   StickyCTA,
   PropertyArt,
@@ -16,28 +27,25 @@ export const metadata: Metadata = {
     'San Miguel de Allende real estate investment platform — real ADR data, turnkey LRM management, income-producing second homes underwritten with institutional rigor.',
 };
 
-const HERO_IMAGE =
-  'https://images.unsplash.com/photo-1518105779142-d975f22f1b0a?auto=format&fit=crop&w=2400&q=80';
-
-// Faithful port of design5/.../home.jsx. Every section pulls from the data
-// layer where possible — Featured properties from getPublishedProperties,
-// the InsightStrip from getPublishedPosts (PR #14). Editorial copy
-// (credibility stats, video tiles, lead-capture access list) lives inline;
-// can move to site_content if/when admin needs to edit without code changes.
-
 export default async function HomePage() {
-  const [properties, posts] = await Promise.all([
-    getPublishedProperties(),
-    getPublishedPosts(),
-  ]);
+  const [properties, posts, heroImage, credibility, videos, occupancy, nbhds] =
+    await Promise.all([
+      getPublishedProperties(),
+      getPublishedPosts(),
+      getHomepageHeroImage(),
+      getHomepageCredibility(),
+      getHomepageVideos(),
+      getHomepageOccupancyChart(),
+      getHomepageNbhdComparison(),
+    ]);
 
   return (
     <div className='doc-page' data-screen-label='Home'>
-      <Hero />
-      <Credibility />
+      <Hero heroImage={heroImage} />
+      <Credibility stats={credibility} />
       <FeaturedPreview properties={properties.slice(0, 3)} />
-      <MarketPreview />
-      <VideoSection />
+      <MarketPreview occupancy={occupancy} nbhds={nbhds} />
+      <VideoSection videos={videos} />
       <InsightStrip posts={posts.slice(0, 3)} />
       <LeadCapture />
       <Disclaimer />
@@ -50,7 +58,7 @@ export default async function HomePage() {
 // Hero — cinematic Ken Burns with data card
 // ===========================================================================
 
-function Hero() {
+function Hero({ heroImage }: { heroImage: string }) {
   return (
     <section
       style={{
@@ -66,7 +74,7 @@ function Hero() {
         style={{
           position: 'absolute',
           inset: 0,
-          backgroundImage: `url(${HERO_IMAGE})`,
+          backgroundImage: `url(${heroImage})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center 40%',
         }}
@@ -340,13 +348,7 @@ function HeroDataCard() {
 // Credibility · Track record stats
 // ===========================================================================
 
-function Credibility() {
-  const stats = [
-    { num: '312', label: 'Properties\ntracked' },
-    { num: '$2.4B', label: 'AUM in San\nMiguel market' },
-    { num: '11', label: 'Years operating\nLRM portfolio' },
-    { num: '94%', label: 'Investor 2nd-\ntransaction rate' },
-  ];
+function Credibility({ stats }: { stats: CredibilityStat[] }) {
   return (
     <section
       style={{
@@ -564,7 +566,13 @@ function PropertyCardCompact({ p }: { p: Property }) {
 // MarketPreview (dark) · OccupancyChart + NbhdComparison
 // ===========================================================================
 
-function MarketPreview() {
+function MarketPreview({
+  occupancy,
+  nbhds,
+}: {
+  occupancy: OccupancyChartData;
+  nbhds: NbhdComparisonRow[];
+}) {
   return (
     <section
       className='surface-dark'
@@ -591,8 +599,8 @@ function MarketPreview() {
           style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 32, marginTop: 48 }}
           className='market-grid'
         >
-          <OccupancyChart />
-          <NbhdComparison />
+          <OccupancyChart data={occupancy} />
+          <NbhdComparison nbhds={nbhds} />
         </div>
 
         <div
@@ -619,9 +627,8 @@ function MarketPreview() {
   );
 }
 
-function OccupancyChart() {
-  const months = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
-  const data = [78, 82, 76, 64, 52, 48, 54, 56, 58, 68, 81, 86];
+function OccupancyChart({ data: chart }: { data: OccupancyChartData }) {
+  const { months, data, fig_label, title, annual_avg } = chart;
   const max = 100;
   const w = 720;
   const h = 280;
@@ -631,11 +638,11 @@ function OccupancyChart() {
     <div style={{ background: 'rgba(245,239,226,0.03)', border: '1px solid rgba(245,239,226,0.1)', padding: 32 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 24 }}>
         <div>
-          <div className='data-label' style={{ color: '#C9A55A' }}>Fig. 01 · Seasonal Occupancy</div>
-          <div className='display' style={{ fontSize: 26, marginTop: 8 }}>2025 average — 4-bedroom SMA</div>
+          <div className='data-label' style={{ color: '#C9A55A' }}>{fig_label}</div>
+          <div className='display' style={{ fontSize: 26, marginTop: 8 }}>{title}</div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div className='mono tnum' style={{ fontSize: 28, color: '#C9A55A' }}>62.4%</div>
+          <div className='mono tnum' style={{ fontSize: 28, color: '#C9A55A' }}>{annual_avg}</div>
           <div className='data-label' style={{ marginTop: 4 }}>Annual avg</div>
         </div>
       </div>
@@ -725,14 +732,7 @@ function OccupancyChart() {
   );
 }
 
-function NbhdComparison() {
-  const nbhds = [
-    { name: 'Centro Histórico', adr: 418, yield: 9.8 },
-    { name: 'Atascadero', adr: 362, yield: 8.4 },
-    { name: 'San Antonio', adr: 294, yield: 9.2 },
-    { name: 'Los Frailes', adr: 312, yield: 7.6 },
-    { name: 'El Chorro', adr: 486, yield: 8.9 },
-  ];
+function NbhdComparison({ nbhds }: { nbhds: NbhdComparisonRow[] }) {
   return (
     <div style={{ background: 'rgba(245,239,226,0.03)', border: '1px solid rgba(245,239,226,0.1)', padding: 32 }}>
       <div className='data-label' style={{ color: '#C9A55A' }}>Fig. 02 · Neighborhoods</div>
@@ -776,30 +776,7 @@ function NbhdComparison() {
 // Video section
 // ===========================================================================
 
-function VideoSection() {
-  const videos = [
-    {
-      id: 'v1',
-      title: 'Q1 Market Update — what shifted',
-      dur: '8:42',
-      img: 'https://images.unsplash.com/photo-1555881400-69d63dca8a91?auto=format&fit=crop&w=1200&q=80',
-      cat: 'Market Update',
-    },
-    {
-      id: 'v2',
-      title: 'Inside Casa Solana — full property tour',
-      dur: '12:18',
-      img: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1200&q=80',
-      cat: 'Property Tour',
-    },
-    {
-      id: 'v3',
-      title: 'How LRM manages a 5-property portfolio',
-      dur: '14:05',
-      img: 'https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=1200&q=80',
-      cat: 'Operator Series',
-    },
-  ];
+function VideoSection({ videos }: { videos: VideoTile[] }) {
   return (
     <section style={{ background: '#FBF8F0', padding: '120px 0' }}>
       <div className='container'>

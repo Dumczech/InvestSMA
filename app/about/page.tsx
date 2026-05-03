@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Disclaimer, StickyCTA } from '@/components/site';
+import { getAboutContent, type AboutContent } from '@/lib/data/editorial';
 
 export const metadata: Metadata = {
   title: 'About · InvestSMA',
@@ -8,35 +9,13 @@ export const metadata: Metadata = {
     "InvestSMA is a research and lead-gen platform operated by Luxury Rental Management — operators, not brokers. Eleven years of San Miguel rental performance data informs every recommendation.",
 };
 
-// Faithful port of design5/.../about.jsx — hero + positioning ("we are /
-// we are not") + operations stack + closing CTA. Editorial copy lives
-// inline; can be moved to site_content if/when admin needs to edit.
-
-const NOT = [
-  { t: 'A real estate brokerage', d: "We don't represent buyers or sellers in transactions, and we don't collect a brokerage commission on your purchase." },
-  { t: 'A passive financial advisor', d: "We're not licensed financial advisors. We don't package securities or run pooled funds." },
-  { t: 'A speculation play', d: "We don't make calls based on macro sentiment or where prices \"should\" be in five years." },
-];
-
-const ARE = [
-  { t: 'Operators', d: 'We run a portfolio of high-end short-term rentals in SMA every day. The data flowing through our system is what informs every recommendation.' },
-  { t: 'A management platform', d: 'Through Luxury Rental Management, we execute the full operational stack — design, listing, pricing, distribution, guest experience.' },
-  { t: 'Aligned by performance', d: "Our income depends on the property performing after it's purchased. That keeps the incentives clean." },
-];
-
-const STACK = [
-  { phase: 'Acquisition', items: ['Off-market sourcing', 'Underwriting + memo', 'Notario + fideicomiso intro'] },
-  { phase: 'Stabilization', items: ['Design refresh + furnishing', 'Pro photo + 360° tour', 'OTA + direct site live'] },
-  { phase: 'Operations', items: ['24/7 bilingual concierge', 'Dynamic pricing weekly', 'Quarterly owner reporting'] },
-  { phase: 'Optimization', items: ['Annual ADR/occ review', 'Capex ROI tracking', 'Tax-efficient distributions'] },
-];
-
-export default function AboutPage() {
+export default async function AboutPage() {
+  const content = await getAboutContent();
   return (
     <div className='doc-page' data-screen-label='About'>
-      <Hero />
-      <AreNotAre />
-      <OperationsStack />
+      <Hero stats={content.stats} />
+      <AreNotAre are_not={content.are_not} are={content.are} />
+      <OperationsStack stack={content.stack} />
       <ClosingCta />
       <Disclaimer />
       <StickyCTA label='Talk to the LRM team' cta='Request Access' href='/contact' />
@@ -44,7 +23,7 @@ export default function AboutPage() {
   );
 }
 
-function Hero() {
+function Hero({ stats }: { stats: AboutContent['stats'] }) {
   return (
     <section
       className='surface-dark'
@@ -117,11 +96,7 @@ function Hero() {
               clean acquisition and a performing asset — is what we close.
             </p>
             <div style={{ marginTop: 32, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
-              {[
-                { v: '11', l: 'Years operating SMA' },
-                { v: '40+', l: 'LRM portfolio doors' },
-                { v: '$280K', l: 'Avg. gross / property' },
-              ].map((s, i) => (
+              {stats.map((s, i) => (
                 <div key={i} style={{ borderTop: '1px solid rgba(201,165,90,0.4)', paddingTop: 12 }}>
                   <div className='display tnum' style={{ fontSize: 32, color: '#C9A55A' }}>{s.v}</div>
                   <div className='data-label' style={{ marginTop: 4 }}>{s.l}</div>
@@ -135,7 +110,13 @@ function Hero() {
   );
 }
 
-function AreNotAre() {
+function AreNotAre({
+  are_not,
+  are,
+}: {
+  are_not: AboutContent['are_not'];
+  are: AboutContent['are'];
+}) {
   return (
     <section style={{ background: '#FBF8F0', padding: '120px 0' }}>
       <div className='container'>
@@ -158,7 +139,7 @@ function AreNotAre() {
               <span style={{ flex: 1, height: 1, background: 'rgba(20,19,15,0.15)' }} />
             </div>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-              {NOT.map((x, i) => (
+              {are_not.map((x, i) => (
                 <li
                   key={i}
                   style={{
@@ -206,7 +187,7 @@ function AreNotAre() {
               <span style={{ flex: 1, height: 1, background: 'rgba(245,239,226,0.2)' }} />
             </div>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-              {ARE.map((x, i) => (
+              {are.map((x, i) => (
                 <li
                   key={i}
                   style={{
@@ -238,7 +219,7 @@ function AreNotAre() {
   );
 }
 
-function OperationsStack() {
+function OperationsStack({ stack }: { stack: AboutContent['stack'] }) {
   return (
     <section className='surface-dark' style={{ background: '#14130F', color: '#F5EFE2', padding: '120px 0' }}>
       <div className='container'>
@@ -261,7 +242,7 @@ function OperationsStack() {
           style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24, marginTop: 56 }}
           className='stack-grid'
         >
-          {STACK.map((c, i) => (
+          {stack.map((c, i) => (
             <div key={i} style={{ borderTop: '1px solid #C9A55A', paddingTop: 24 }}>
               <div className='mono tnum' style={{ fontSize: 11, color: '#C9A55A', letterSpacing: '0.16em' }}>
                 PHASE 0{i + 1}

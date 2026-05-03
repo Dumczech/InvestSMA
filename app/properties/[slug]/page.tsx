@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getPropertyBySlug } from '@/lib/data/cms';
+import { getMemoEditorial, type MemoEditorial } from '@/lib/data/editorial';
 import { Disclaimer, StickyCTA, PropertyArt } from '@/components/site';
 import type { Property } from '@/types/property';
 
@@ -34,18 +35,21 @@ export default async function MemoPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const p = await getPropertyBySlug(slug);
+  const [p, memo] = await Promise.all([
+    getPropertyBySlug(slug),
+    getMemoEditorial(),
+  ]);
   if (!p) notFound();
 
   return (
     <div className='doc-page' data-screen-label='Memo'>
       <MemoHero p={p} />
-      <Thesis p={p} />
-      <Revenue p={p} />
-      <Seasonal />
-      <Upgrades p={p} />
-      <ManagementStrategy />
-      <Risks />
+      <Thesis p={p} thesis={memo.thesis} />
+      <Revenue p={p} memo={memo} />
+      <Seasonal events={memo.seasonal_events} />
+      <Upgrades p={p} upgrades={memo.upgrades} />
+      <ManagementStrategy management={memo.management} stats={memo.management_stats} />
+      <Risks risks={memo.risks} />
       <Comps p={p} />
       <MemoCTA p={p} />
       <Disclaimer />
@@ -363,26 +367,11 @@ function Section({
 // Section 01 — Thesis
 // ===========================================================================
 
-function Thesis({ p }: { p: Property }) {
-  const adrHigh = p.adrHigh ?? 0;
-  const points = [
-    {
-      t: 'Location alpha',
-      d: `${p.neighborhood} commands ADR ${adrHigh > 600 ? '40%+' : '20–30%'} above SMA average. Walkable to Jardín, Parroquia, and the principal restaurant corridor.`,
-    },
-    {
-      t: 'Inventory scarcity',
-      d: 'Active inventory in this segment fell 4.2% YoY. Only 11 luxury 4BD+ properties traded in Q1 2026.',
-    },
-    {
-      t: 'Demand tailwind',
-      d: 'Wedding season + Día de Muertos + Christmas occupy 78% of November–March nights at premium ADR.',
-    },
-    {
-      t: 'Operator advantage',
-      d: 'LRM portfolio properties generate 18% higher RevPAR vs. owner-operated peers — verified across 312 units.',
-    },
-  ];
+function Thesis({ p, thesis }: { p: Property; thesis: MemoEditorial['thesis'] }) {
+  const points = thesis.map(pt => ({
+    t: pt.t,
+    d: pt.d.replace(/\{neighborhood\}/g, p.neighborhood ?? 'This neighborhood'),
+  }));
   return (
     <Section num='01' title='Investment thesis' subtitle='Four reasons we accepted this onto the platform.'>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 32 }} className='memo-grid-2'>
@@ -402,17 +391,14 @@ function Thesis({ p }: { p: Property }) {
 // Section 02 — Revenue
 // ===========================================================================
 
-const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'] as const;
-const SEASONALITY = [88, 84, 76, 64, 48, 42, 56, 58, 54, 64, 78, 92];
-const ADR_FACTOR = [1.2, 1.15, 1.05, 0.92, 0.78, 0.72, 0.85, 0.85, 0.82, 0.95, 1.18, 1.35];
-
-function Revenue({ p }: { p: Property }) {
+function Revenue({ p, memo }: { p: Property; memo: MemoEditorial }) {
   const adrLow = p.adrLow ?? 0;
   const adrHigh = p.adrHigh ?? 0;
   const grossLow = p.annualGrossLow ?? 0;
   const grossHigh = p.annualGrossHigh ?? 0;
   const occ = p.occupancyPercent ?? 65;
   const baseADR = adrLow && adrHigh ? (adrLow + adrHigh) / 2 : adrLow || adrHigh || 0;
+  const ADR_FACTOR = memo.adr_factor;
 
   return (
     <Section
@@ -467,20 +453,31 @@ function Revenue({ p }: { p: Property }) {
             </div>
           </div>
         </div>
-        <RevenueChart baseADR={baseADR} occ={occ} />
+        <RevenueChart baseADR={baseADR} occ={occ} memo={memo} />
       </div>
     </Section>
   );
 }
 
-function RevenueChart({ baseADR, occ }: { baseADR: number; occ: number }) {
+function RevenueChart({
+  baseADR,
+  occ,
+  memo,
+}: {
+  baseADR: number;
+  occ: number;
+  memo: MemoEditorial;
+}) {
+  const MONTHS = memo.monthly_labels;
+  const SEASONALITY = memo.seasonality;
+  const ADR_FACTOR = memo.adr_factor;
   const w = 1100;
   const h = 280;
   const pad = 50;
   const bw = (w - pad * 2) / MONTHS.length;
   const monthlyRev = MONTHS.map((_, i) => {
-    const adr = baseADR * ADR_FACTOR[i];
-    const o = (SEASONALITY[i] / 100) * (occ / 65);
+    const adr = baseADR * (ADR_FACTOR[i] ?? 1);
+    const o = ((SEASONALITY[i] ?? 60) / 100) * (occ / 65);
     return adr * 30 * o;
   });
   const max = Math.max(...monthlyRev) * 1.1 || 1;
@@ -576,13 +573,7 @@ function DataCard({
 // Section 03 — Seasonal
 // ===========================================================================
 
-function Seasonal() {
-  const events = [
-    { period: 'Día de Muertos', date: 'Oct 28 – Nov 4', adr: '$680', occ: '92%', notes: 'Books 6mo out' },
-    { period: 'Christmas / NYE', date: 'Dec 18 – Jan 4', adr: '$820', occ: '96%', notes: 'Multi-week stays' },
-    { period: 'Wedding peak', date: 'Feb – Apr weekends', adr: '$640', occ: '88%', notes: 'Full-property buyouts' },
-    { period: 'Independence Day', date: 'Sep 13 – 17', adr: '$480', occ: '85%', notes: 'Domestic demand' },
-  ];
+function Seasonal({ events }: { events: MemoEditorial['seasonal_events'] }) {
   return (
     <Section
       num='03'
@@ -637,13 +628,13 @@ function Seasonal() {
 // Section 04 — Upgrades
 // ===========================================================================
 
-function Upgrades({ p }: { p: Property }) {
-  const upgrades = [
-    { item: 'Rooftop terrace expansion + plunge pool', cost: 65000, lift: '+$48 ADR', payback: '2.1 yr' },
-    { item: 'Primary suite refresh + linens', cost: 22000, lift: '+$22 ADR', payback: '1.4 yr' },
-    { item: 'Outdoor kitchen / fire pit', cost: 28000, lift: '+$18 ADR', payback: '2.2 yr' },
-    { item: 'Pro photography + LRM staging', cost: 8000, lift: '+8% occ', payback: '0.6 yr' },
-  ];
+function Upgrades({
+  p,
+  upgrades,
+}: {
+  p: Property;
+  upgrades: MemoEditorial['upgrades'];
+}) {
   const total = upgrades.reduce((s, u) => s + u.cost, 0);
   return (
     <Section
@@ -698,19 +689,14 @@ function Upgrades({ p }: { p: Property }) {
 // Section 05 — Management strategy (dark)
 // ===========================================================================
 
-function ManagementStrategy() {
-  const cols = [
-    { stage: 'Acquisition', items: ['Title clearance via Mexican notary', 'Fideicomiso setup (60 days)', 'Inventory + condition audit'] },
-    { stage: 'Stabilization', items: ['LRM design refresh (90 days)', 'Pro photo + 360° tour', 'OTA listings + direct site live'] },
-    { stage: 'Operations', items: ['24/7 guest concierge (bilingual)', 'Dynamic pricing — adjusted weekly', 'Quarterly owner reporting'] },
-    { stage: 'Optimization', items: ['Annual ADR & occupancy review', 'Upgrade ROI tracking', 'Tax-efficient distribution planning'] },
-  ];
-  const stats = [
-    { v: '22%', l: 'LRM mgmt fee' },
-    { v: '4–6 wks', l: 'To first guest' },
-    { v: '47', l: 'Active LRM properties' },
-    { v: '18%', l: 'RevPAR vs. owner-op' },
-  ];
+function ManagementStrategy({
+  management,
+  stats,
+}: {
+  management: MemoEditorial['management'];
+  stats: MemoEditorial['management_stats'];
+}) {
+  const cols = management.map(m => ({ stage: m.phase, items: m.items }));
   return (
     <Section
       num='05'
@@ -774,13 +760,7 @@ function ManagementStrategy() {
 // Section 06 — Risks
 // ===========================================================================
 
-function Risks() {
-  const risks = [
-    { t: 'Regulatory', d: 'SMA municipality is reviewing short-term rental licensing. We model 6% annual licensing/registration cost as a contingency, even though current law does not require it.' },
-    { t: 'FX exposure', d: 'Owner P&L is reported in MXN. We hedge 50% of distributions via forward contracts; net peso volatility historically ±4% annualized on yields.' },
-    { t: 'Concentration', d: 'A material portion of demand originates from US/Canada. We model a 12% revenue haircut in a recession scenario but historical SMA performance has decoupled from US metro markets.' },
-    { t: 'Operator dependency', d: 'Property economics rely on LRM (or comparable) management. Owner-operator path is supported but reduces projected RevPAR by ~18%.' },
-  ];
+function Risks({ risks }: { risks: MemoEditorial['risks'] }) {
   return (
     <Section
       num='06'

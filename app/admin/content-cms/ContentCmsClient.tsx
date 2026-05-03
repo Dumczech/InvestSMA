@@ -7,13 +7,26 @@ type Row = { key: string; value: unknown; status: string; updated_at: string };
 type Status = 'published' | 'draft';
 
 // Well-known keys; quick-fill templates so admins don't have to remember
-// the JSON shape. Anything not listed is editable via the catch-all.
-const KNOWN_KEYS: Array<{ key: string; label: string; template: unknown }> = [
-  { key: 'homepage_hero', label: 'Homepage hero', template: { headline: '', subheadline: '' } },
-  { key: 'homepage_metrics', label: 'Homepage metrics', template: { items: [{ label: '', value: '' }] } },
+// the JSON shape. `usedBy` shows where each key surfaces on the public
+// site so editors know what they're changing. Anything not listed is
+// editable via the catch-all.
+const KNOWN_KEYS: Array<{ key: string; label: string; usedBy: string; template: unknown }> = [
+  {
+    key: 'homepage_hero',
+    label: 'Homepage hero',
+    usedBy: '/ — hero copy',
+    template: { headline: '', subheadline: '' },
+  },
+  {
+    key: 'homepage_metrics',
+    label: 'Homepage metrics',
+    usedBy: '/ — credibility strip',
+    template: { items: [{ label: '', value: '' }] },
+  },
   {
     key: 'homepage_market_snapshot',
     label: 'Homepage market snapshot',
+    usedBy: '/ — compare-view block',
     template: {
       title: 'Market Index Snapshot (Compare View)',
       comparisons: [{ label: 'ADR', lrm: '', market: '' }],
@@ -24,11 +37,140 @@ const KNOWN_KEYS: Array<{ key: string; label: string; template: unknown }> = [
   {
     key: 'homepage_gated_cta',
     label: 'Homepage gated CTA',
+    usedBy: '/ — gated report CTA',
     template: {
       title: 'Gated Market Report',
       body: '',
       ctaLabel: 'Request access',
       ctaHref: '/contact',
+    },
+  },
+  {
+    key: 'homepage_hero_image',
+    label: 'Homepage hero image',
+    usedBy: '/ — fullscreen Ken Burns background',
+    template: { url: 'https://images.unsplash.com/...' },
+  },
+  {
+    key: 'homepage_credibility',
+    label: 'Homepage credibility stats',
+    usedBy: '/ — Track Record section (4 stats)',
+    template: {
+      items: [
+        { num: '312',   label: 'Properties\ntracked' },
+        { num: '$2.4B', label: 'AUM in San\nMiguel market' },
+        { num: '11',    label: 'Years operating\nLRM portfolio' },
+        { num: '94%',   label: 'Investor 2nd-\ntransaction rate' },
+      ],
+    },
+  },
+  {
+    key: 'homepage_videos',
+    label: 'Homepage video tiles',
+    usedBy: '/ — Video Library section (3 tiles)',
+    template: {
+      items: [
+        { id: 'v1', title: '', dur: '0:00', img: '', cat: '' },
+      ],
+    },
+  },
+  {
+    key: 'homepage_occupancy_chart',
+    label: 'Homepage occupancy chart',
+    usedBy: '/ — Market Intelligence chart',
+    template: {
+      fig_label: 'Fig. 01 · Seasonal Occupancy',
+      title: '2025 average — 4-bedroom SMA',
+      annual_avg: '62.4%',
+      months: ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'],
+      data: [78, 82, 76, 64, 52, 48, 54, 56, 58, 68, 81, 86],
+    },
+  },
+  {
+    key: 'homepage_nbhd_comparison',
+    label: 'Homepage neighborhood comparison',
+    usedBy: '/ — ADR-by-district bars',
+    template: {
+      items: [{ name: '', adr: 0, yield: 0 }],
+    },
+  },
+  {
+    key: 'ticker_items',
+    label: 'Site ticker (marquee)',
+    usedBy: 'All pages — top Bloomberg-style ticker',
+    template: {
+      items: [
+        { label: 'SMA·OCC', val: '62.4%', delta: '+3.1%', up: true },
+      ],
+    },
+  },
+  {
+    key: 'nav_pages',
+    label: 'Site nav links',
+    usedBy: 'All pages — top navigation',
+    template: {
+      items: [
+        { id: 'home', label: 'Home', href: '/' },
+      ],
+    },
+  },
+  {
+    key: 'footer_config',
+    label: 'Site footer',
+    usedBy: 'All pages — footer columns + copyright',
+    template: {
+      tagline: '',
+      chips: ['Operator-led', 'Real Data'],
+      explore: [{ label: '', href: '' }],
+      resources: [{ label: '', href: '' }],
+      contact: [{ label: '', href: '' }],
+      copyright: '',
+      tagline_short: '',
+    },
+  },
+  {
+    key: 'about_page',
+    label: 'About page editorial',
+    usedBy: '/about — stats, positioning, ops stack',
+    template: {
+      stats: [{ v: '', l: '' }],
+      are_not: [{ t: '', d: '' }],
+      are: [{ t: '', d: '' }],
+      stack: [{ phase: '', items: [''] }],
+    },
+  },
+  {
+    key: 'contact_form_options',
+    label: 'Contact form options',
+    usedBy: '/contact — interest / budget / timeline buttons',
+    template: {
+      interests: [''],
+      budgets: ['$500K–$1M', '$1M–$2M', '$2M–$5M', '$5M+'],
+      timelines: ['0–3 mo', '3–6 mo', '6–12 mo', '12+ mo', 'Researching'],
+    },
+  },
+  {
+    key: 'insights_categories',
+    label: 'Insights categories',
+    usedBy: '/insights — category filter chips (future)',
+    template: {
+      items: [{ id: 'all', label: 'All Insights', matches: null }],
+    },
+  },
+  {
+    key: 'memo_editorial',
+    label: 'Property memo editorial defaults',
+    usedBy: '/properties/[slug] — thesis, upgrades, mgmt, risks, seasonal events',
+    template: {
+      monthly_labels: ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'],
+      seasonality: [88, 84, 76, 64, 48, 42, 56, 58, 54, 64, 78, 92],
+      adr_factor: [1.2, 1.15, 1.05, 0.92, 0.78, 0.72, 0.85, 0.85, 0.82, 0.95, 1.18, 1.35],
+      thesis: [{ t: '', d: '' }],
+      upgrades: [{ item: '', cost: 0, lift: '', payback: '' }],
+      management: [{ phase: '', items: [''] }],
+      management_stats: [{ v: '', l: '' }],
+      risks: [{ t: '', d: '' }],
+      seasonal_events: [{ period: '', date: '', adr: '', occ: '', notes: '' }],
     },
   },
 ];
@@ -157,9 +299,11 @@ export default function ContentCmsClient({ initialRows }: { initialRows: Row[] }
                   key={t.key}
                   onClick={() => startNew(t)}
                   className='btn btn-ghost btn-sm'
-                  style={{ justifyContent: 'flex-start' }}
+                  style={{ justifyContent: 'flex-start', flexDirection: 'column', alignItems: 'flex-start', gap: 2, padding: '6px 10px' }}
+                  title={t.usedBy}
                 >
-                  {exists ? '↻' : '+'} {t.label}
+                  <span style={{ fontWeight: 500 }}>{exists ? '↻' : '+'} {t.label}</span>
+                  <span className='muted' style={{ fontSize: 10, fontWeight: 400 }}>{t.usedBy}</span>
                 </button>
               );
             })}

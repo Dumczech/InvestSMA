@@ -11,16 +11,6 @@ export const metadata: Metadata = {
     'San Miguel de Allende vacation rental investment guides, market reports, case studies, and tax guidance — published every two weeks.',
 };
 
-const CATS: Array<{ id: string; label: string; matches: (p: PostMeta) => boolean }> = [
-  { id: 'all', label: 'All Insights', matches: () => true },
-  { id: 'market', label: 'Market Reports', matches: p => p.category === 'Market Report' },
-  { id: 'guide', label: 'Investment Guides', matches: p => p.category === 'Investment Guide' },
-  { id: 'buyer', label: 'Buyer Education', matches: p => p.category === 'Buyer Education' },
-  { id: 'case', label: 'Case Studies', matches: p => p.category === 'Case Study' },
-  { id: 'tax', label: 'Tax & Ownership', matches: p => p.category === 'Tax & Ownership' },
-  { id: 'lifestyle', label: 'Second-Home Living', matches: p => p.category === 'Lifestyle' },
-];
-
 const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
 

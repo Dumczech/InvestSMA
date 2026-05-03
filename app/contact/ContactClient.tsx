@@ -18,19 +18,27 @@ type Form = {
   message: string;
 };
 
-const INTERESTS = [
-  'Second home (primary use)',
-  'Pure investment property',
-  'Hybrid personal-use + rental',
-  'Off-market / pre-listing access',
-  'Portfolio (3+ properties)',
-  'Just doing research',
-];
+type ContactOptions = {
+  interests: string[];
+  budgets: string[];
+  timelines: string[];
+};
 
-const BUDGETS = ['$500K–$1M', '$1M–$2M', '$2M–$5M', '$5M+'];
-const TIMELINES = ['0–3 mo', '3–6 mo', '6–12 mo', '12+ mo', 'Researching'];
+const DEFAULT_OPTIONS: ContactOptions = {
+  interests: [
+    'Second home (primary use)',
+    'Pure investment property',
+    'Hybrid personal-use + rental',
+    'Off-market / pre-listing access',
+    'Portfolio (3+ properties)',
+    'Just doing research',
+  ],
+  budgets: ['$500K–$1M', '$1M–$2M', '$2M–$5M', '$5M+'],
+  timelines: ['0–3 mo', '3–6 mo', '6–12 mo', '12+ mo', 'Researching'],
+};
 
-export default function ContactClient() {
+export default function ContactClient({ options = DEFAULT_OPTIONS }: { options?: ContactOptions }) {
+  const { interests: INTERESTS, budgets: BUDGETS, timelines: TIMELINES } = options;
   const [step, setStep] = useState(1);
   const [submitted, setSubmitted] = useState(false);
   const [busy, setBusy] = useState(false);
