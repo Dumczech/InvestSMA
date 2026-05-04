@@ -87,6 +87,41 @@ describe('POST /api/admin/media-assets — JSON update flow', () => {
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ ok: false, error: 'Missing id' });
   });
+
+  it('400s when no editable fields are supplied', async () => {
+    const req = new Request('http://test.local/api/admin/media-assets', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ id: 'abc' }),
+    }) as unknown as import('next/server').NextRequest;
+
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ ok: false, error: 'No editable fields supplied' });
+  });
+
+  it('patches folder + name + tags via JSON', async () => {
+    eqMock.mockResolvedValueOnce({ error: null });
+
+    const req = new Request('http://test.local/api/admin/media-assets', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        id: 'abc',
+        folder: 'properties/casa-olivos',
+        name: 'hero.jpg',
+        tags: ['hero', '  ', 'exterior', 42],
+      }),
+    }) as unknown as import('next/server').NextRequest;
+
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    expect(updateMock).toHaveBeenCalledWith({
+      folder: 'properties/casa-olivos',
+      name: 'hero.jpg',
+      tags: ['hero', 'exterior'],
+    });
+  });
 });
 
 describe('POST /api/admin/media-assets — multipart upload flow', () => {
@@ -122,6 +157,40 @@ describe('POST /api/admin/media-assets — multipart upload flow', () => {
       module: 'property',
       alt_text: 'Casa courtyard',
       uploaded_by: 'admin',
+      name: 'casa.jpg',
+      size_bytes: 3,
+      folder: 'property',
+      tags: [],
+    }));
+  });
+
+  it('honors folder + tags from the multipart form and prefixes the storage path', async () => {
+    storageUploadMock.mockResolvedValueOnce({ error: null });
+    insertMock.mockResolvedValueOnce({ error: null });
+
+    const fd = new FormData();
+    fd.set('file', new File([new Uint8Array([0, 0, 0, 0])], 'olive.jpg', { type: 'image/jpeg' }));
+    fd.set('folder', 'properties/casa-olivos');
+    fd.set('alt_text', 'Olive trees');
+    fd.set('tags', ' sunset, exterior , ');
+
+    const req = new Request('http://test.local/api/admin/media-assets', {
+      method: 'POST',
+      body: fd,
+    }) as unknown as import('next/server').NextRequest;
+
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+
+    const uploadArgs = storageUploadMock.mock.calls[0];
+    expect(uploadArgs[0]).toMatch(/^properties\/casa-olivos\/\d+-olive\.jpg$/);
+
+    expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({
+      folder: 'properties/casa-olivos',
+      module: 'properties/casa-olivos',
+      tags: ['sunset', 'exterior'],
+      size_bytes: 4,
+      name: 'olive.jpg',
     }));
   });
 

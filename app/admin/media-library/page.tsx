@@ -3,14 +3,12 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Topbar, Icon } from '../AdminShell';
 
-// Faithful port of design admin/media.jsx — folder tree sidebar, grid +
-// list views, search / kind filter / sort, multi-select with bulk
-// actions, and a detail drawer. Persists what media_assets currently
-// has (storage_bucket, storage_path, mime_type, module, alt_text,
-// created_at). The design's `name`, `folder`, `dims`, `size_bytes`,
-// `kind`, `tags[]`, and `usages[]` aren't yet in the schema — derived
-// where possible (folder from module, name from path basename, kind
-// from mime_type) and flagged TODO_SCHEMA where not.
+// Folder tree sidebar, grid + list views, search / kind filter / sort,
+// multi-select bulk actions, and a detail drawer over the
+// media_assets table. After the metadata migration the table now
+// stores `name`, `folder`, `size_bytes`, width/height, and `tags[]`,
+// so the design's storage strip + tag filter + per-asset stats are
+// all real (not derived). Kind is still derived from mime_type.
 
 type Asset = {
   id: string;
@@ -20,6 +18,13 @@ type Asset = {
   module: string | null;
   alt_text: string | null;
   created_at: string;
+  name?: string | null;
+  folder?: string | null;
+  size_bytes?: number | null;
+  width?: number | null;
+  height?: number | null;
+  duration_ms?: number | null;
+  tags?: string[] | null;
 };
 
 type Kind = 'image' | 'video' | 'document' | 'other';
@@ -33,13 +38,36 @@ function kindOf(mime?: string | null): Kind {
 }
 
 function nameOf(a: Asset): string {
+  if (a.name?.trim()) return a.name;
   const base = a.storage_path.split('/').pop() || a.storage_path;
   return decodeURIComponent(base);
 }
 
 function folderOf(a: Asset): string {
-  return a.module?.trim() || 'unsorted';
+  return (a.folder ?? a.module)?.trim() || 'unsorted';
 }
+
+function fmtBytes(n?: number | null): string {
+  if (n == null || n <= 0) return '—';
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  if (n < 1024 * 1024 * 1024) return `${(n / 1024 / 1024).toFixed(1)} MB`;
+  return `${(n / 1024 / 1024 / 1024).toFixed(2)} GB`;
+}
+
+function fmtDims(a: Asset): string {
+  if (a.width && a.height) return `${a.width}×${a.height}`;
+  return '—';
+}
+
+function fmtDuration(ms?: number | null): string {
+  if (!ms) return '';
+  const s = Math.round(ms / 1000);
+  const m = Math.floor(s / 60);
+  return `${m}:${String(s % 60).padStart(2, '0')}`;
+}
+
+const STORAGE_QUOTA_BYTES = 5 * 1024 * 1024 * 1024; // 5 GB display ceiling, matches the design
 
 function fmtDate(iso?: string | null): string {
   if (!iso) return '—';
@@ -59,7 +87,7 @@ export default function Page() {
   const [folder, setFolder] = useState('all');
   const [kind, setKind] = useState<'all' | Kind>('all');
   const [search, setSearch] = useState('');
-  const [sort, setSort] = useState<'uploaded-desc' | 'uploaded-asc' | 'name-asc' | 'name-desc'>('uploaded-desc');
+  const [sort, setSort] = useState<'uploaded-desc' | 'uploaded-asc' | 'name-asc' | 'name-desc' | 'size-desc'>('uploaded-desc');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [detail, setDetail] = useState<Asset | null>(null);
   const [showUpload, setShowUpload] = useState(false);
@@ -106,7 +134,8 @@ export default function Page() {
       if (kind !== 'all' && kindOf(a.mime_type) !== kind) return false;
       if (search) {
         const q = search.toLowerCase();
-        const hay = `${nameOf(a)} ${a.alt_text ?? ''} ${a.module ?? ''}`.toLowerCase();
+        const tags = (a.tags ?? []).join(' ');
+        const hay = `${nameOf(a)} ${a.alt_text ?? ''} ${folderOf(a)} ${tags}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
@@ -116,6 +145,7 @@ export default function Page() {
     else if (sort === 'uploaded-asc') list.sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
     else if (sort === 'name-asc')    list.sort((a, b) => nameOf(a).localeCompare(nameOf(b)));
     else if (sort === 'name-desc')   list.sort((a, b) => nameOf(b).localeCompare(nameOf(a)));
+    else if (sort === 'size-desc')   list.sort((a, b) => (b.size_bytes ?? 0) - (a.size_bytes ?? 0));
     return list;
   }, [assets, folder, kind, search, sort]);
 
@@ -136,7 +166,7 @@ export default function Page() {
   return (
     <div className='main'>
       <Topbar crumbs={['Media library']}>
-        <button className='btn btn-sm btn-ghost' title='Folders are derived from the module column · TODO_SCHEMA: folders table'>
+        <button className='btn btn-sm btn-ghost' title='Folders are organic · upload an asset with a new folder name to create one'>
           <Icon name='folder' /> New folder
         </button>
         <button className='btn btn-sm btn-primary' onClick={() => setShowUpload(true)}>
@@ -178,12 +208,7 @@ export default function Page() {
             </div>
             <div style={{ padding: '20px', marginTop: 16, borderTop: '1px solid var(--border)' }}>
               <div className='muted' style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Storage</div>
-              <div className='mono' style={{ fontSize: 11, color: 'var(--fg-muted)' }}>
-                {assets.length} asset{assets.length === 1 ? '' : 's'} · size unknown
-              </div>
-              <div className='mono muted' style={{ fontSize: 10, marginTop: 4 }}>
-                TODO_SCHEMA: size_bytes column for usage charts
-              </div>
+              <StorageStrip assets={assets} />
             </div>
           </aside>
 
@@ -204,7 +229,7 @@ export default function Page() {
                 <div className='addon'><Icon name='search' /></div>
                 <input
                   className='input'
-                  placeholder='Search filename, alt text, module…'
+                  placeholder='Search filename, alt text, folder, tag…'
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                 />
@@ -217,6 +242,7 @@ export default function Page() {
               </select>
               <select className='select' value={sort} onChange={e => setSort(e.target.value as typeof sort)} style={{ width: 160 }}>
                 <option value='uploaded-desc'>Newest first</option>
+                <option value='size-desc'>Largest first</option>
                 <option value='uploaded-asc'>Oldest first</option>
                 <option value='name-asc'>Name A–Z</option>
                 <option value='name-desc'>Name Z–A</option>
@@ -237,8 +263,8 @@ export default function Page() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: 'var(--fg)', color: '#fff', borderRadius: 'var(--radius)', marginBottom: 12 }}>
                 <span style={{ fontWeight: 600 }}>{selected.size} selected</span>
                 <span style={{ flex: 1 }} />
-                <button className='btn btn-sm' style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none' }} title='TODO: requires move endpoint'><Icon name='folder' /> Move</button>
-                <button className='btn btn-sm' style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none' }} title='TODO_SCHEMA: tags'><Icon name='tag' /> Tags</button>
+                <button className='btn btn-sm' style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none' }} title='Bulk move requires a confirmation modal — pending'><Icon name='folder' /> Move</button>
+                <button className='btn btn-sm' style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none' }} title='Tag editor lives in the detail drawer — open one asset to manage tags'><Icon name='tag' /> Tags</button>
                 <button className='btn btn-sm' style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none' }}><Icon name='download' /> Download</button>
                 <button className='btn btn-sm' style={{ background: 'rgba(255,80,80,0.2)', color: '#fff', border: 'none' }} title='TODO: requires DELETE endpoint'><Icon name='trash' /> Delete</button>
                 <button className='btn btn-sm btn-ghost' style={{ color: '#fff' }} onClick={clearSelection}>Clear</button>
@@ -442,7 +468,8 @@ function DetailDrawer({
   onSaved: () => void;
 }) {
   const [alt, setAlt] = useState(asset.alt_text ?? '');
-  const [module, setModule] = useState(asset.module ?? '');
+  const [folder, setFolder] = useState(asset.folder ?? asset.module ?? '');
+  const [tagsInput, setTagsInput] = useState((asset.tags ?? []).join(', '));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const url = thumbUrl(asset);
@@ -451,10 +478,17 @@ function DetailDrawer({
   const save = async () => {
     setBusy(true); setErr(null);
     try {
+      const tags = tagsInput.split(',').map(t => t.trim()).filter(Boolean);
       const r = await fetch('/api/admin/media-assets', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ id: asset.id, alt_text: alt, module }),
+        body: JSON.stringify({
+          id: asset.id,
+          alt_text: alt,
+          folder,
+          module: folder,
+          tags,
+        }),
       });
       const j = await r.json();
       if (!j.ok) throw new Error(j.error || 'Save failed');
@@ -497,10 +531,13 @@ function DetailDrawer({
             <div className='card-body' style={{ padding: 14 }}>
               <Stat k='Type'        v={asset.mime_type ?? '—'} mono />
               <Stat k='Bucket'      v={asset.storage_bucket ?? '—'} mono />
-              <Stat k='Module'      v={asset.module ?? '—'} />
+              <Stat k='Folder'      v={folderOf(asset)} mono />
               <Stat k='Uploaded'    v={fmtDate(asset.created_at)} mono />
-              <Stat k='Size'        v='— · TODO_SCHEMA: size_bytes' />
-              <Stat k='Dimensions'  v='— · TODO_SCHEMA: dims' />
+              <Stat k='Size'        v={fmtBytes(asset.size_bytes)} mono />
+              <Stat k='Dimensions'  v={fmtDims(asset)} mono />
+              {asset.duration_ms != null && (
+                <Stat k='Duration' v={fmtDuration(asset.duration_ms)} mono />
+              )}
             </div>
           </div>
 
@@ -516,8 +553,18 @@ function DetailDrawer({
           </div>
 
           <div className='field'>
-            <label className='label'>Module / folder <span className='help'>property / blog / hero / reports</span></label>
-            <input className='input' value={module} onChange={e => setModule(e.target.value)} />
+            <label className='label'>Folder <span className='help'>e.g. properties/casa-olivos · site/hero · reports</span></label>
+            <input className='input' value={folder} onChange={e => setFolder(e.target.value)} />
+          </div>
+
+          <div className='field'>
+            <label className='label'>Tags <span className='help'>comma-separated</span></label>
+            <input
+              className='input'
+              value={tagsInput}
+              onChange={e => setTagsInput(e.target.value)}
+              placeholder='hero, exterior, sunset'
+            />
           </div>
 
           {err && <div className='badge badge-danger' style={{ padding: '8px 12px' }}>{err}</div>}
@@ -544,12 +591,37 @@ function Stat({ k, v, mono = false }: { k: string; v: React.ReactNode; mono?: bo
 }
 
 // ---------------------------------------------------------------------------
+// Storage usage strip
+// ---------------------------------------------------------------------------
+
+function StorageStrip({ assets }: { assets: Asset[] }) {
+  const total = assets.reduce((sum, a) => sum + (a.size_bytes ?? 0), 0);
+  const pct = Math.min(100, (total / STORAGE_QUOTA_BYTES) * 100);
+  const known = assets.filter(a => a.size_bytes != null).length;
+  return (
+    <>
+      <div style={{ height: 4, background: 'var(--bg-subtle)', borderRadius: 2, overflow: 'hidden', marginBottom: 6 }}>
+        <div style={{ height: '100%', width: `${pct}%`, background: 'var(--fg)' }} />
+      </div>
+      <div className='mono' style={{ fontSize: 11, color: 'var(--fg-muted)' }}>
+        {fmtBytes(total)} of {fmtBytes(STORAGE_QUOTA_BYTES)} used
+      </div>
+      <div className='mono muted' style={{ fontSize: 10, marginTop: 4 }}>
+        {assets.length} asset{assets.length === 1 ? '' : 's'}
+        {known < assets.length ? ` · ${assets.length - known} pre-migration (size unknown)` : ''}
+      </div>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Upload modal
 // ---------------------------------------------------------------------------
 
 function UploadModal({ onClose, onUploaded }: { onClose: () => void; onUploaded: () => void }) {
-  const [moduleName, setModuleName] = useState('property');
+  const [folderName, setFolderName] = useState('property');
   const [altText, setAltText] = useState('');
+  const [tags, setTags] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -559,8 +631,10 @@ function UploadModal({ onClose, onUploaded }: { onClose: () => void; onUploaded:
     setBusy(true); setErr(null);
     try {
       const fd = new FormData(form);
-      fd.set('module', moduleName);
+      fd.set('folder', folderName);
+      fd.set('module', folderName);
       fd.set('alt_text', altText);
+      fd.set('tags', tags);
       const r = await fetch('/api/admin/media-assets', { method: 'POST', body: fd });
       const j = await r.json();
       if (!j.ok) throw new Error(j.error || 'Upload failed');
@@ -587,13 +661,17 @@ function UploadModal({ onClose, onUploaded }: { onClose: () => void; onUploaded:
             </div>
             <div className='grid-2' style={{ gap: 12 }}>
               <div className='field'>
-                <label className='label'>Module</label>
-                <input className='input' value={moduleName} onChange={e => setModuleName(e.target.value)} placeholder='property' />
+                <label className='label'>Folder</label>
+                <input className='input' value={folderName} onChange={e => setFolderName(e.target.value)} placeholder='properties/casa-olivos' />
               </div>
               <div className='field'>
                 <label className='label'>Alt text</label>
                 <input className='input' value={altText} onChange={e => setAltText(e.target.value)} placeholder='Casa Olivos courtyard at sunset' />
               </div>
+            </div>
+            <div className='field'>
+              <label className='label'>Tags <span className='help'>comma-separated</span></label>
+              <input className='input' value={tags} onChange={e => setTags(e.target.value)} placeholder='hero, exterior' />
             </div>
             {err && <div className='badge badge-danger' style={{ padding: '8px 12px' }}>{err}</div>}
           </div>
