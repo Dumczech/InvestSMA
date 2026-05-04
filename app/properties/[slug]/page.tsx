@@ -600,7 +600,7 @@ function Seasonal({
       title={copy.seasonal_title}
       subtitle={copy.seasonal_subtitle}
     >
-      <div style={{ overflow: 'hidden', border: '1px solid rgba(20,19,15,0.15)' }}>
+      <div style={{ overflowX: 'auto', border: '1px solid rgba(20,19,15,0.15)' }}>
         <div
           style={{
             display: 'grid',
@@ -612,6 +612,7 @@ function Seasonal({
             fontSize: 10,
             letterSpacing: '0.16em',
             textTransform: 'uppercase',
+            minWidth: 640,
           }}
         >
           {copy.seasonal_cols.map((c, i) => (
@@ -628,6 +629,7 @@ function Seasonal({
               borderBottom: i < events.length - 1 ? '1px solid rgba(20,19,15,0.1)' : 'none',
               background: i % 2 === 0 ? '#FBF8F0' : '#F5EFE2',
               alignItems: 'center',
+              minWidth: 640,
             }}
           >
             <span className='display' style={{ fontSize: 22 }}>{e.period}</span>
@@ -996,6 +998,7 @@ function MemoCTA({ p, copy }: { p: Property; copy: MemoCopy }) {
                 gridTemplateColumns: 'repeat(3, 1fr)',
                 gap: 16,
               }}
+              className='memo-cta-steps'
             >
               {copy.cta_steps.map(s => (
                 <div key={s.n} style={{ borderTop: '1px solid rgba(201,165,90,0.4)', paddingTop: 12 }}>
