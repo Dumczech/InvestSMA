@@ -1,0 +1,72 @@
+# Auto-applies any new SQL files in supabase/migrations/ to the linked
+# Supabase project (see supabase/config.toml). Runs on pushes to `main`
+# that touch the migrations directory, and can also be triggered
+# manually with the "Include all" toggle for the first-ever run when
+# no migrations have been tracked remotely yet.
+#
+# Required GitHub secrets:
+#   SUPABASE_ACCESS_TOKEN  — Personal access token from
+#                            https://supabase.com/dashboard/account/tokens
+#   SUPABASE_DB_PASSWORD   — Database password for the project (from
+#                            Project Settings → Database in Supabase)
+#
+# Project ref comes from supabase/config.toml; no extra secret needed.
+
+name: Apply Supabase migrations
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/config.toml'
+      - '.github/workflows/supabase-migrate.yml'
+  workflow_dispatch:
+    inputs:
+      include_all:
+        description: 'Include all migrations (use for the first-ever run before any are tracked remotely)'
+        type: boolean
+        default: false
+
+concurrency:
+  group: supabase-migrate
+  cancel-in-progress: false
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Read project ref from config.toml
+        id: cfg
+        run: |
+          ref=$(grep -E '^project_id\s*=' supabase/config.toml | sed -E 's/.*"([^"]+)".*/\1/')
+          if [ -z "$ref" ]; then
+            echo "::error::Could not parse project_id from supabase/config.toml"
+            exit 1
+          fi
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          echo "Project ref: $ref"
+
+      - name: Link project
+        run: supabase link --project-ref "${{ steps.cfg.outputs.ref }}"
+
+      - name: List pending migrations
+        run: supabase migration list
+
+      - name: Push migrations
+        run: |
+          if [ "${{ inputs.include_all }}" = "true" ]; then
+            echo "Running with --include-all (first-time bootstrap)"
+            supabase db push --include-all
+          else
+            supabase db push
+          fi
