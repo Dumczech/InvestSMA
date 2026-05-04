@@ -22,6 +22,13 @@ export type ArticleRow = {
   read_minutes: number | null;
   published_at: string | null;
   created_at: string;
+  // 20260504_articles_reports_metadata.sql
+  hero_image_url: string | null;
+  hero_alt: string | null;
+  seo_title: string | null;
+  meta_description: string | null;
+  canonical_url: string | null;
+  review_status: 'draft' | 'review' | 'published' | null;
 };
 
 const CATEGORIES = [
@@ -49,7 +56,11 @@ const STATUS_LABEL: Record<Status, string> = {
 };
 
 function statusOfRow(r: ArticleRow): Status {
-  // No `review` column yet — derive from published flag.
+  // Prefer the explicit review_status column; fall back to the
+  // published flag for rows written before the metadata migration.
+  if (r.review_status === 'review' || r.review_status === 'draft' || r.review_status === 'published') {
+    return r.review_status;
+  }
   return r.published ? 'published' : 'draft';
 }
 
@@ -243,6 +254,11 @@ type Draft = {
   status: Status;
   author: string;
   publishedAt: string; // YYYY-MM-DD or ''
+  heroImageUrl: string;
+  heroAlt: string;
+  seoTitle: string;
+  metaDescription: string;
+  canonicalUrl: string;
 };
 
 function rowToDraft(r: ArticleRow): Draft {
@@ -255,6 +271,11 @@ function rowToDraft(r: ArticleRow): Draft {
     status: statusOfRow(r),
     author: r.author ?? 'Justin McCarter',
     publishedAt: r.published_at ? new Date(r.published_at).toISOString().slice(0, 10) : '',
+    heroImageUrl: r.hero_image_url ?? '',
+    heroAlt: r.hero_alt ?? '',
+    seoTitle: r.seo_title ?? '',
+    metaDescription: r.meta_description ?? '',
+    canonicalUrl: r.canonical_url ?? '',
   };
 }
 
@@ -262,11 +283,14 @@ const EMPTY_DRAFT: Draft = {
   slug: '', title: '', category: 'Market Analysis',
   excerpt: '', body: '', status: 'draft',
   author: 'Justin McCarter', publishedAt: '',
+  heroImageUrl: '', heroAlt: '',
+  seoTitle: '', metaDescription: '', canonicalUrl: '',
 };
 
 function draftToPayload(d: Draft) {
   const wordCount = d.body.trim().split(/\s+/).filter(Boolean).length;
   const readMinutes = Math.max(1, Math.ceil(wordCount / 220));
+  const strOrNull = (s: string) => (s.trim() ? s.trim() : null);
   return {
     slug: d.slug.trim(),
     title: d.title.trim(),
@@ -274,9 +298,15 @@ function draftToPayload(d: Draft) {
     excerpt: d.excerpt.trim() || null,
     body: d.body.trim() || null,
     published: d.status === 'published',
+    review_status: d.status,
     author: d.author.trim() || null,
     read_minutes: readMinutes,
     published_at: d.publishedAt ? new Date(d.publishedAt).toISOString() : null,
+    hero_image_url:   strOrNull(d.heroImageUrl),
+    hero_alt:         strOrNull(d.heroAlt),
+    seo_title:        strOrNull(d.seoTitle),
+    meta_description: strOrNull(d.metaDescription),
+    canonical_url:    strOrNull(d.canonicalUrl),
   };
 }
 
@@ -430,22 +460,49 @@ function ContentTab({
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20 }} className='post-editor-grid'>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {/* TODO_SCHEMA: articles.hero_image_url + hero_alt columns. */}
         <div className='card'>
           <div className='card-head'>
             <div>
               <h3 className='card-title'>Hero image</h3>
-              <p className='card-subtitle'>not yet stored · 1600×900 recommended</p>
+              <p className='card-subtitle'>1600×900 recommended · paste a Media Library path or absolute URL</p>
             </div>
           </div>
-          <div className='card-body'>
-            <div style={{ aspectRatio: '16/9', border: '2px dashed var(--border-strong)', borderRadius: 8, display: 'grid', placeItems: 'center', color: 'var(--fg-muted)' }}>
-              <div style={{ textAlign: 'center' }}>
-                <Icon name='upload' style={{ width: 32, height: 32, opacity: 0.4, marginBottom: 6 }} />
-                <div style={{ fontWeight: 600, color: 'var(--fg)' }}>Hero image picker</div>
-                <div style={{ fontSize: 12, marginTop: 4 }}>Requires a hero_image_url column on articles</div>
-              </div>
+          <div className='card-body col gap-12'>
+            <div className='field'>
+              <label className='label'>Hero image URL</label>
+              <input
+                className='input'
+                value={draft.heroImageUrl}
+                onChange={e => update('heroImageUrl', e.target.value)}
+                placeholder='insights/centro-q1/hero.jpg'
+              />
             </div>
+            <div className='field'>
+              <label className='label'>Alt text <span className='help'>accessibility + SEO</span></label>
+              <input
+                className='input'
+                value={draft.heroAlt}
+                onChange={e => update('heroAlt', e.target.value)}
+                placeholder='Aerial view of Centro at golden hour'
+              />
+            </div>
+            {draft.heroImageUrl ? (
+              <div style={{ aspectRatio: '16/9', borderRadius: 8, overflow: 'hidden', background: 'var(--bg-subtle)' }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={draft.heroImageUrl.startsWith('http') ? draft.heroImageUrl : `/${draft.heroImageUrl.replace(/^\/+/, '')}`}
+                  alt={draft.heroAlt}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              </div>
+            ) : (
+              <div style={{ aspectRatio: '16/9', border: '2px dashed var(--border-strong)', borderRadius: 8, display: 'grid', placeItems: 'center', color: 'var(--fg-muted)' }}>
+                <div style={{ textAlign: 'center' }}>
+                  <Icon name='upload' style={{ width: 32, height: 32, opacity: 0.4, marginBottom: 6 }} />
+                  <div style={{ fontSize: 12 }}>No hero image yet</div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -559,12 +616,11 @@ function SeoTab({
   draft: Draft;
   update: <K extends keyof Draft>(k: K, v: Draft[K]) => void;
 }) {
-  // TODO_SCHEMA: articles.seo_title + meta_description + canonical_url columns.
   return (
     <div className='card'>
       <div className='card-head'>
         <h3 className='card-title'>SEO</h3>
-        <p className='card-subtitle'>Slug round-trips · the rest are not yet stored (schema migration required)</p>
+        <p className='card-subtitle'>Used for search engines and social sharing</p>
       </div>
       <div className='card-body col gap-16'>
         <div className='field'>
@@ -575,16 +631,32 @@ function SeoTab({
           </div>
         </div>
         <div className='field'>
-          <label className='label'>SEO title <span className='help'>60 chars</span></label>
-          <input className='input' />
+          <label className='label'>SEO title <span className='help'>{draft.seoTitle.length}/60</span></label>
+          <input
+            className='input'
+            value={draft.seoTitle}
+            onChange={e => update('seoTitle', e.target.value)}
+            placeholder='Centro Q1 2026: ADR climbs 8.2% as inventory tightens'
+          />
         </div>
         <div className='field'>
-          <label className='label'>Meta description <span className='help'>155 chars</span></label>
-          <textarea className='textarea' rows={2} />
+          <label className='label'>Meta description <span className='help'>{draft.metaDescription.length}/155</span></label>
+          <textarea
+            className='textarea'
+            rows={2}
+            value={draft.metaDescription}
+            onChange={e => update('metaDescription', e.target.value)}
+            placeholder="Centro's Q4 numbers tell a story of structural decoupling — and a widening spread that's hard to explain by seasonality alone."
+          />
         </div>
         <div className='field'>
           <label className='label'>Canonical URL</label>
-          <input className='input' placeholder='https://investsma.com/insights/...' />
+          <input
+            className='input'
+            value={draft.canonicalUrl}
+            onChange={e => update('canonicalUrl', e.target.value)}
+            placeholder='https://investsma.com/insights/centro-q1-2026'
+          />
         </div>
       </div>
     </div>

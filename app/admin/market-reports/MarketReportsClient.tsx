@@ -5,11 +5,9 @@ import { Topbar, Icon } from '../AdminShell';
 
 // Faithful port of design admin/reports.jsx — table with quarter/year
 // filters, per-row gated/active toggles, an upload modal, and a
-// replace-PDF confirmation. Persists what `market_reports` currently
-// has (title, period, summary, pdf_path, published). Design fields
-// without backing columns yet (gated, active vs. published, downloads,
-// separate quarter/year) render with TODO_SCHEMA notes; quarter+year
-// are joined into the existing free-text `period` column on save.
+// replace-PDF confirmation. Persists title, period, summary, pdf_path,
+// published, gated, and download_count. Quarter+year are joined into
+// the existing free-text `period` column on save.
 
 export type ReportRow = {
   id: string;
@@ -18,6 +16,8 @@ export type ReportRow = {
   summary: string | null;
   pdf_path: string | null;
   published: boolean;
+  gated: boolean;
+  download_count: number;
   created_at: string;
 };
 
@@ -66,13 +66,13 @@ export default function MarketReportsClient({ initialRows }: { initialRows: Repo
 
   const counts = useMemo(() => ({
     active: rows.filter(r => r.published).length,
-    gated:  rows.filter(r => r.published).length, // TODO_SCHEMA: separate gated column
+    gated:  rows.filter(r => r.gated).length,
   }), [rows]);
 
-  const togglePublished = async (row: ReportRow) => {
+  const toggleField = async (row: ReportRow, field: 'published' | 'gated') => {
     setBusyRowId(row.id);
     try {
-      const next = { ...row, published: !row.published, summary: row.summary ?? '' };
+      const next: ReportRow = { ...row, [field]: !row[field] };
       const r = await fetch('/api/admin/market-reports', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -80,9 +80,10 @@ export default function MarketReportsClient({ initialRows }: { initialRows: Repo
           id: row.id,
           title: row.title,
           period: row.period,
-          summary: next.summary || null,
+          summary: row.summary,
           pdf_path: row.pdf_path,
           published: next.published,
+          gated: next.gated,
         }),
       });
       const j = await r.json();
@@ -168,18 +169,16 @@ export default function MarketReportsClient({ initialRows }: { initialRows: Repo
                         </div>
                       </td>
                       <td className='mono'>{p.quarter} · {p.year || '—'}</td>
-                      {/* TODO_SCHEMA: download counter */}
-                      <td className='num mono muted'>—</td>
-                      {/* TODO_SCHEMA: separate `gated` column. For now, mirrors `published`. */}
+                      <td className='num mono'>{r.download_count.toLocaleString()}</td>
                       <td>
-                        <label className='switch' title='Gated state mirrors Active until a gated column is added'>
-                          <input type='checkbox' checked={r.published} onChange={() => togglePublished(r)} disabled={busyRowId === r.id} />
+                        <label className='switch'>
+                          <input type='checkbox' checked={r.gated} onChange={() => toggleField(r, 'gated')} disabled={busyRowId === r.id} />
                           <span className='switch-track' />
                         </label>
                       </td>
                       <td>
                         <label className='switch'>
-                          <input type='checkbox' checked={r.published} onChange={() => togglePublished(r)} disabled={busyRowId === r.id} />
+                          <input type='checkbox' checked={r.published} onChange={() => toggleField(r, 'published')} disabled={busyRowId === r.id} />
                           <span className='switch-track' />
                         </label>
                       </td>
@@ -249,6 +248,7 @@ function UploadModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
         summary: summary.trim() || null,
         pdf_path: pdfPath.trim() || null,
         published: active,
+        gated,
       };
       const r = await fetch('/api/admin/market-reports', {
         method: 'POST',
@@ -264,6 +264,8 @@ function UploadModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
         summary: payload.summary,
         pdf_path: payload.pdf_path,
         published: payload.published,
+        gated: payload.gated,
+        download_count: 0,
         created_at: new Date().toISOString(),
       };
       onCreated(saved);
@@ -314,7 +316,7 @@ function UploadModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
             </div>
             <div className='row gap-16'>
               <label className='row gap-8' style={{ fontSize: 13 }}>
-                <input type='checkbox' checked={gated} onChange={e => setGated(e.target.checked)} disabled title='gated mirrors active until a separate column ships' /> Gate behind lead capture
+                <input type='checkbox' checked={gated} onChange={e => setGated(e.target.checked)} /> Gate behind lead capture
               </label>
               <label className='row gap-8' style={{ fontSize: 13 }}>
                 <input type='checkbox' checked={active} onChange={e => setActive(e.target.checked)} /> Active immediately
