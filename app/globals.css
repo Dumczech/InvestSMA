@@ -456,6 +456,33 @@ body:has(.nav) { background: var(--paper); color: var(--ink); }
     grid-template-columns: 1fr !important;
     gap: 8px !important;
   }
+
+  /* Cases / guide / reports / tax / 404 grids */
+  .cases-stats-grid,
+  .guide-stats-grid,
+  .report-headline-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .case-row,
+  .cases-method-grid,
+  .guide-hero-grid,
+  .guide-toc-grid,
+  .guide-preview-grid,
+  .report-hero-grid,
+  .report-toc-grid,
+  .report-archive-row,
+  .nf-grid {
+    grid-template-columns: 1fr !important;
+    gap: 24px !important;
+  }
+  .tax-layout,
+  .tax-topic {
+    grid-template-columns: 1fr !important;
+  }
+  .tax-bullet {
+    grid-template-columns: 1fr !important;
+    gap: 4px !important;
+  }
 }
 
 /* ===== Form fields (lead-capture / contact / roi-calculator) ===== */
