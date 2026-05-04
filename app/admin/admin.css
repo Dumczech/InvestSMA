@@ -828,9 +828,23 @@ td .row-sub { color: var(--fg-subtle); font-size: 12px; }
 .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
 
+/* Media Library two-pane layout */
+.media-layout {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: calc(100vh - 56px);
+}
+.media-sidebar {
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  padding: 20px 0;
+}
+
 @media (max-width: 920px) {
   .post-editor-grid { grid-template-columns: 1fr !important; }
   .grid-3 { grid-template-columns: 1fr; }
   .grid-4 { grid-template-columns: repeat(2, 1fr); }
+  .media-layout { grid-template-columns: 1fr; }
+  .media-sidebar { border-right: none; border-bottom: 1px solid var(--border); }
 }
 .grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
