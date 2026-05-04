@@ -8,7 +8,7 @@ async function loadArticles(): Promise<ArticleRow[]> {
     const s = getSupabaseServerClient();
     const { data, error } = await s
       .from('articles')
-      .select('id,slug,title,category,excerpt,body,published,author,read_minutes,published_at,created_at')
+      .select('id,slug,title,category,excerpt,body,published,author,read_minutes,published_at,created_at,hero_image_url,hero_alt,seo_title,meta_description,canonical_url,review_status')
       .order('created_at', { ascending: false });
     if (error) throw error;
     return (data ?? []) as ArticleRow[];

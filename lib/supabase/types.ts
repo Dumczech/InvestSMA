@@ -112,6 +112,9 @@ type MarketReportsRow = {
   summary: string | null;
   pdf_path: string | null;
   published: boolean;
+  // 20260504_articles_reports_metadata.sql
+  gated: boolean;
+  download_count: number;
 };
 
 type BenchmarkDataRow = {
@@ -143,6 +146,13 @@ type ArticlesRow = {
   body_json: Json | null;
   related: Json | null;
   published_at: string | null;
+  // 20260504_articles_reports_metadata.sql
+  hero_image_url: string | null;
+  hero_alt: string | null;
+  seo_title: string | null;
+  meta_description: string | null;
+  canonical_url: string | null;
+  review_status: 'draft' | 'review' | 'published';
 };
 
 type SiteContentRow = {
