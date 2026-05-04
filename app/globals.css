@@ -526,6 +526,31 @@ body:has(.nav) { background: var(--paper); color: var(--ink); }
     grid-template-columns: 1fr !important;
     gap: 16px !important;
   }
+
+  /* Homepage hero — desktop sizes the section to 100vh + 720px min and
+     anchors content to flex-end. On a 700px-tall phone the multi-line
+     headline overflows the section's available area and the first line
+     hides behind the ticker. Let the section grow with content,
+     position content top-down, and shrink the headline so it fits. */
+  .hero-section {
+    height: auto !important;
+    min-height: 0 !important;
+    padding: 32px 0 56px;
+  }
+  .hero-content-anchor {
+    position: relative !important;
+    inset: auto !important;
+    justify-content: flex-start !important;
+    padding-bottom: 0 !important;
+  }
+  .hero-headline {
+    font-size: clamp(36px, 9vw, 56px) !important;
+    line-height: 1.05 !important;
+  }
+  /* Decorative bottom strip ("↓ Scroll · 01 of 06" + GPS coords) doesn't
+     fit the new auto-height layout cleanly; the data card already
+     occupies the bottom on phones. Hide on small viewports. */
+  .hero-bottom-strip { display: none !important; }
 }
 
 /* ===== Form fields (lead-capture / contact / roi-calculator) ===== */

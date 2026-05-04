@@ -64,6 +64,7 @@ export default async function HomePage() {
 function Hero({ heroImage, copy }: { heroImage: string; copy: HomepageCopy }) {
   return (
     <section
+      className='hero-section'
       style={{
         position: 'relative',
         height: '100vh',
@@ -101,7 +102,7 @@ function Hero({ heroImage, copy }: { heroImage: string; copy: HomepageCopy }) {
       <CrosshairFrame />
 
       <div
-        className='container'
+        className='container hero-content-anchor'
         style={{
           position: 'absolute',
           inset: 0,
@@ -139,7 +140,7 @@ function Hero({ heroImage, copy }: { heroImage: string; copy: HomepageCopy }) {
               <span>{copy.hero_eyebrow}</span>
             </div>
             <h1
-              className='display'
+              className='display hero-headline'
               style={{
                 fontSize: 'clamp(48px, 7vw, 104px)',
                 color: '#F5EFE2',
@@ -179,6 +180,7 @@ function Hero({ heroImage, copy }: { heroImage: string; copy: HomepageCopy }) {
       </div>
 
       <div
+        className='hero-bottom-strip'
         style={{
           position: 'absolute',
           bottom: 24,
@@ -194,6 +196,7 @@ function Hero({ heroImage, copy }: { heroImage: string; copy: HomepageCopy }) {
         ↓ Scroll · 01 of 06
       </div>
       <div
+        className='hero-bottom-strip'
         style={{
           position: 'absolute',
           bottom: 24,
