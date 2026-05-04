@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { getPublishedPosts, type PostMeta } from '@/lib/data/posts';
 import { getInsightsCopy, type InsightsCopy } from '@/lib/data/editorial';
 import { Disclaimer, StickyCTA } from '@/components/site';
+import { InsightsFilter } from './InsightsFilter';
+import { SubscribeForm } from './SubscribeForm';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,7 +24,7 @@ export default async function InsightsPage() {
     <div className='doc-page' data-screen-label='Insights'>
       <Hero copy={copy} />
       <Featured posts={featured} copy={copy} />
-      <PostGrid posts={posts} copy={copy} />
+      <InsightsFilter posts={posts} emptyState={copy.empty_state} />
       <GatedDownload copy={copy} />
       <Disclaimer />
       <StickyCTA label='Subscribe to weekly briefing' cta='Subscribe' href='/contact' />
@@ -68,27 +70,7 @@ function Hero({ copy }: { copy: InsightsCopy }) {
               {copy.hero_paragraph}
             </p>
           </div>
-          <form
-            action='/contact'
-            style={{ display: 'flex', gap: 8, alignSelf: 'end', flexWrap: 'wrap' }}
-          >
-            <input
-              type='email'
-              name='email'
-              placeholder={copy.subscribe_placeholder}
-              style={{
-                background: 'rgba(245,239,226,0.05)',
-                border: '1px solid rgba(245,239,226,0.2)',
-                padding: '12px 16px',
-                color: '#F5EFE2',
-                fontFamily: 'var(--f-mono)',
-                fontSize: 12,
-                minWidth: 220,
-                outline: 'none',
-              }}
-            />
-            <button className='btn btn-gold' type='submit'>{copy.subscribe_label}</button>
-          </form>
+          <SubscribeForm placeholder={copy.subscribe_placeholder} submitLabel={copy.subscribe_label} />
         </div>
       </div>
     </section>
@@ -162,85 +144,6 @@ function FeaturedCard({ p }: { p: PostMeta }) {
             {fmtDate(p.date)} · {p.readMinutes} min
           </div>
         </div>
-      </div>
-    </Link>
-  );
-}
-
-function PostGrid({ posts, copy }: { posts: PostMeta[]; copy: InsightsCopy }) {
-  if (!posts.length) {
-    return (
-      <section style={{ background: '#FBF8F0', padding: '48px 0 100px' }}>
-        <div className='container'>
-          <div className='lede'>{copy.empty_state}</div>
-        </div>
-      </section>
-    );
-  }
-  return (
-    <section style={{ background: '#FBF8F0', padding: '48px 0 100px' }}>
-      <div className='container'>
-        <div
-          style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 32 }}
-          className='post-grid'
-        >
-          {posts.map(p => (
-            <PostCard key={p.slug} p={p} />
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function PostCard({ p }: { p: PostMeta }) {
-  return (
-    <Link
-      href={`/insights/${p.slug}`}
-      style={{
-        display: 'block',
-        textDecoration: 'none',
-        color: 'inherit',
-        cursor: 'pointer',
-        borderTop: '1px solid rgba(20,19,15,0.15)',
-        paddingTop: 24,
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'baseline',
-          marginBottom: 16,
-        }}
-      >
-        <span
-          className='mono'
-          style={{ fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#B08A3E' }}
-        >
-          {p.category}
-        </span>
-        <span className='mono' style={{ fontSize: 10, opacity: 0.5 }}>{p.readMinutes} min</span>
-      </div>
-      <div className='display' style={{ fontSize: 22, lineHeight: 1.2, minHeight: 80 }}>
-        {p.title}
-      </div>
-      <div
-        style={{
-          marginTop: 24,
-          paddingTop: 16,
-          borderTop: '1px solid rgba(20,19,15,0.08)',
-          fontFamily: 'var(--f-mono)',
-          fontSize: 11,
-          letterSpacing: '0.06em',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          color: '#3A362F',
-        }}
-      >
-        <span>{fmtDate(p.date)}</span>
-        <span style={{ color: '#14130F' }}>Read →</span>
       </div>
     </Link>
   );

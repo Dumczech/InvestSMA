@@ -403,6 +403,61 @@ body:has(.nav) { background: var(--paper); color: var(--ink); }
 }
 .fade-up { animation: fadeUp 800ms ease-out both; }
 
+/* ===== Mobile (homepage section grids set inline as 1fr auto / repeat(N,
+   1fr); inline styles win over CSS, so we override with !important). ===== */
+@media (max-width: 720px) {
+  .container { padding: 0 20px; }
+
+  .hero-grid {
+    grid-template-columns: 1fr !important;
+    gap: 32px !important;
+  }
+  .hero-data-card {
+    width: 100% !important;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .credibility-grid {
+    grid-template-columns: 1fr !important;
+    gap: 32px !important;
+  }
+  .credibility-stats {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .featured-grid,
+  .market-grid,
+  .video-grid,
+  .insight-grid,
+  .lead-capture-grid {
+    grid-template-columns: 1fr !important;
+    gap: 24px !important;
+  }
+  .lead-capture-grid { gap: 32px !important; }
+
+  /* About page section grids */
+  .are-grid,
+  .broker-grid,
+  .lrm-grid,
+  .pullquote-grid,
+  .closing-grid {
+    grid-template-columns: 1fr !important;
+    gap: 32px !important;
+  }
+  .criteria-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+  .pullquote-foot {
+    grid-template-columns: 1fr !important;
+  }
+  .playbook-row {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+}
+
 /* ===== Form fields (lead-capture / contact / roi-calculator) ===== */
 .field-group { display: flex; flex-direction: column; gap: 8px; }
 .field-label {
