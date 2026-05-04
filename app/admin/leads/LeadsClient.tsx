@@ -1,16 +1,14 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Topbar, Icon } from '../AdminShell';
 
-// Faithful port of design admin/leads.jsx — full table with search,
-// 5-axis filters, multi-select with bulk actions, and a 5-tab detail
-// drawer. Persists what the schema currently has (name, email, phone,
-// budget, timeline, buyer_type, neighborhoods, message, source_page,
-// created_at). Status, source classification, assignee, and notes
-// don't exist as columns yet — they're rendered for design fidelity
-// and tracked in-memory only, with TODO_SCHEMA where a migration is
-// required to make them persist.
+// Full leads dashboard: search + 5-axis filters, multi-select with
+// bulk actions, and a 5-tab detail drawer. Backed by the leads table
+// (now including status, source, assigned_to from the lead pipeline
+// migration) plus the lead_notes table for the Notes tab.
+// ROI-inputs and Reports tabs still need their own join tables and
+// remain marked TODO_SCHEMA.
 
 export type Lead = {
   id: string;
@@ -23,6 +21,9 @@ export type Lead = {
   neighborhoods: string[] | null;
   message: string | null;
   source_page: string | null;
+  status: string | null;
+  source: string | null;
+  assigned_to: string | null;
   created_at: string;
 };
 
@@ -65,15 +66,20 @@ const SOURCE_DOT_COLOR: Record<Source, string> = {
   direct:   '#71717A',
 };
 
-// TODO_SCHEMA: leads.status column. Until then, derive a default ("new").
-function statusOf(_lead: Lead): Status {
-  return 'new';
+const STATUS_VALUES = STATUS_OPTIONS.map(s => s[0]) as readonly Status[];
+const SOURCE_VALUES = SOURCE_OPTIONS.map(s => s[0]) as readonly Source[];
+
+// Status reads from the column; falls back to 'new' for older rows.
+function statusOf(lead: Lead): Status {
+  const v = (lead.status ?? '').trim() as Status;
+  return STATUS_VALUES.includes(v) ? v : 'new';
 }
 
-// TODO_SCHEMA: leads.source classification column. Until then, derive a
-// coarse bucket from source_page so filtering still does something
-// meaningful for inbound.
+// Source reads from the column; falls back to a coarse classification
+// derived from source_page so historical rows still filter sensibly.
 function sourceOf(lead: Lead): Source {
+  const stored = (lead.source ?? '').trim() as Source;
+  if (SOURCE_VALUES.includes(stored)) return stored;
   const p = (lead.source_page ?? '').toLowerCase();
   if (p.includes('roi')) return 'roi';
   if (p.includes('memo') || p.includes('properties')) return 'memo';
@@ -83,9 +89,9 @@ function sourceOf(lead: Lead): Source {
   return 'organic';
 }
 
-// TODO_SCHEMA: leads.assigned_to column. Placeholder list cycles through
-// reasonable defaults for visual fidelity.
-function assignedOf(_lead: Lead): string { return 'Unassigned'; }
+function assignedOf(lead: Lead): string {
+  return lead.assigned_to?.trim() || 'Unassigned';
+}
 
 // Coarse budget bucket for the Budget filter pill, derived from the
 // free-text budget column.
@@ -183,7 +189,7 @@ type Filters = {
 const EMPTY_FILTERS: Filters = { status: 'all', source: 'all', budget: 'all', timeline: 'all', buyerType: 'all' };
 
 export default function LeadsClient({ initialLeads }: { initialLeads: Lead[] }) {
-  const [leads] = useState(initialLeads);
+  const [leads, setLeads] = useState(initialLeads);
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<string[]>([]);
@@ -375,7 +381,16 @@ export default function LeadsClient({ initialLeads }: { initialLeads: Lead[] }) 
         </div>
       </div>
 
-      {drawerLead && <LeadDrawer lead={drawerLead} onClose={() => setDrawerLead(null)} />}
+      {drawerLead && (
+        <LeadDrawer
+          lead={drawerLead}
+          onClose={() => setDrawerLead(null)}
+          onChange={(updated) => {
+            setLeads(prev => prev.map(p => p.id === updated.id ? updated : p));
+            setDrawerLead(updated);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -394,10 +409,34 @@ const DRAWER_TABS: Array<[DrawerTab, string]> = [
   ['notes',      'Notes'],
 ];
 
-function LeadDrawer({ lead, onClose }: { lead: Lead; onClose: () => void }) {
+function LeadDrawer({ lead: initial, onClose, onChange }: { lead: Lead; onClose: () => void; onChange: (l: Lead) => void }) {
   const [tab, setTab] = useState<DrawerTab>('overview');
+  const [lead, setLead] = useState<Lead>(initial);
+  const [savingStatus, setSavingStatus] = useState<Status | null>(null);
+  const [statusErr, setStatusErr] = useState<string | null>(null);
   const status = statusOf(lead);
   const src = sourceOf(lead);
+
+  const setStatus = async (next: Status) => {
+    if (next === status) return;
+    setSavingStatus(next); setStatusErr(null);
+    try {
+      const r = await fetch('/api/admin/leads', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id: lead.id, status: next }),
+      });
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error || 'Failed to update status');
+      const updated = { ...lead, status: next };
+      setLead(updated);
+      onChange(updated);
+    } catch (e) {
+      setStatusErr((e as Error).message);
+    } finally {
+      setSavingStatus(null);
+    }
+  };
   return (
     <>
       <div className='overlay' onClick={onClose} style={{ background: 'rgba(9,9,11,0.3)' }} />
@@ -448,15 +487,28 @@ function LeadDrawer({ lead, onClose }: { lead: Lead; onClose: () => void }) {
 
               <div>
                 <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: 'var(--fg-subtle)', marginBottom: 8, letterSpacing: '0.06em' }}>
-                  Update status <span className='muted' style={{ textTransform: 'none', fontWeight: 400 }}>· not yet stored</span>
+                  Update status
                 </div>
                 <div className='row gap-6' style={{ flexWrap: 'wrap' }}>
-                  {STATUS_OPTIONS.map(([s]) => (
-                    <button key={s} className={`btn btn-sm ${status === s ? 'btn-primary' : ''}`} title='Status updates require a leads.status column'>
-                      <StatusBadge status={s} />
-                    </button>
-                  ))}
+                  {STATUS_OPTIONS.map(([s]) => {
+                    const isCurrent = status === s;
+                    const isPending = savingStatus === s;
+                    return (
+                      <button
+                        key={s}
+                        className={`btn btn-sm ${isCurrent ? 'btn-primary' : ''}`}
+                        onClick={() => setStatus(s)}
+                        disabled={savingStatus !== null || isCurrent}
+                      >
+                        <StatusBadge status={s} />
+                        {isPending && <span className='muted' style={{ fontSize: 11 }}>…</span>}
+                      </button>
+                    );
+                  })}
                 </div>
+                {statusErr && (
+                  <div className='badge badge-danger' style={{ marginTop: 8, padding: '6px 10px' }}>{statusErr}</div>
+                )}
               </div>
 
               <div>
@@ -510,20 +562,7 @@ function LeadDrawer({ lead, onClose }: { lead: Lead; onClose: () => void }) {
             </div>
           )}
 
-          {/* TODO_SCHEMA: lead_notes table. */}
-          {tab === 'notes' && (
-            <div className='col gap-12'>
-              <textarea className='textarea' placeholder='Add an internal note…' rows={3} />
-              <div className='row' style={{ justifyContent: 'flex-end' }}>
-                <button className='btn btn-sm btn-primary' disabled title='Notes require a lead_notes table'>Add note</button>
-              </div>
-              <div className='card'>
-                <div className='card-body' style={{ padding: 14, fontSize: 13, color: 'var(--fg-muted)' }}>
-                  Internal notes will appear here once the <code>lead_notes</code> table is added.
-                </div>
-              </div>
-            </div>
-          )}
+          {tab === 'notes' && <NotesTab leadId={lead.id} />}
         </div>
       </div>
     </>
@@ -535,6 +574,97 @@ function Stat({ k, v, mono = false }: { k: string; v: React.ReactNode; mono?: bo
     <div className='stat-row'>
       <span className='k'>{k}</span>
       <span className={`v ${mono ? 'mono' : ''}`}>{v}</span>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Notes tab — fetches existing notes for the lead and posts new ones.
+// ---------------------------------------------------------------------------
+
+type Note = { id: string; lead_id: string; body: string; author: string | null; created_at: string };
+
+function NotesTab({ leadId }: { leadId: string }) {
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/admin/lead-notes?lead_id=${encodeURIComponent(leadId)}`)
+      .then(r => r.json())
+      .then(j => { if (!cancelled) { setNotes(j.data ?? []); setLoaded(true); } })
+      .catch(() => { if (!cancelled) setLoaded(true); });
+    return () => { cancelled = true; };
+  }, [leadId]);
+
+  const submit = async () => {
+    const trimmed = draft.trim();
+    if (!trimmed) return;
+    setBusy(true); setErr(null);
+    try {
+      const r = await fetch('/api/admin/lead-notes', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ lead_id: leadId, body: trimmed }),
+      });
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error || 'Failed to add note');
+      setNotes(prev => [j.data as Note, ...prev]);
+      setDraft('');
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className='col gap-12'>
+      <textarea
+        className='textarea'
+        placeholder='Add an internal note…'
+        rows={3}
+        value={draft}
+        onChange={e => setDraft(e.target.value)}
+      />
+      <div className='row' style={{ justifyContent: 'flex-end' }}>
+        <button
+          className='btn btn-sm btn-primary'
+          onClick={submit}
+          disabled={busy || !draft.trim()}
+        >
+          {busy ? 'Adding…' : 'Add note'}
+        </button>
+      </div>
+
+      {err && <div className='badge badge-danger' style={{ padding: '6px 10px' }}>{err}</div>}
+
+      {!loaded ? (
+        <div className='muted' style={{ fontSize: 13, padding: 14 }}>Loading…</div>
+      ) : notes.length === 0 ? (
+        <div className='card'>
+          <div className='card-body' style={{ padding: 14, fontSize: 13, color: 'var(--fg-muted)' }}>
+            No notes yet. Internal notes are visible to admins only.
+          </div>
+        </div>
+      ) : (
+        <div className='col gap-8'>
+          {notes.map(n => (
+            <div key={n.id} className='card'>
+              <div className='card-body' style={{ padding: 14 }}>
+                <div style={{ fontSize: 13, marginBottom: 6 }}>
+                  <strong>{n.author ?? 'admin'}</strong>{' '}
+                  <span className='muted mono' style={{ fontSize: 11 }}>{fmtDate(n.created_at)}</span>
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--fg-muted)', whiteSpace: 'pre-wrap' }}>{n.body}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -38,6 +38,17 @@ type LeadsRow = {
   neighborhoods: string[] | null;
   message: string | null;
   source_page: string | null;
+  status: string;
+  source: string | null;
+  assigned_to: string | null;
+};
+
+type LeadNotesRow = {
+  id: string;
+  lead_id: string;
+  body: string;
+  author: string | null;
+  created_at: string;
 };
 
 type PropertiesRow = {
@@ -359,6 +370,7 @@ export interface Database {
   public: {
     Tables: {
       leads: Table<LeadsRow>;
+      lead_notes: Table<LeadNotesRow>;
       properties: Table<PropertiesRow>;
       market_reports: Table<MarketReportsRow>;
       benchmark_data: Table<BenchmarkDataRow>;
