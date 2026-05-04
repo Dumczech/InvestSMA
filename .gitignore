@@ -17,3 +17,7 @@ design[0-9]*.tar.gz
 .next/
 out/
 *.tsbuildinfo
+
+# Playwright
+playwright-report/
+test-results/
