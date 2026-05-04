@@ -79,6 +79,29 @@ type PropertiesRow = {
   accent2: string | null;
   style: 'colonial' | 'hacienda' | 'villa' | null;
   hero_image: string | null;
+  // 20260504_property_metadata.sql
+  headline: string | null;
+  position_in_market: 'Entry' | 'Premium' | 'Editorial' | 'Trophy' | null;
+  occupancy_low_pct: number | null;
+  occupancy_high_pct: number | null;
+  lrm_management_fee_pct: number | null;
+  cleaning_per_stay_usd: number | null;
+  property_tax_usd: number | null;
+  utilities_per_year_usd: number | null;
+  insurance_per_year_usd: number | null;
+  maintenance_reserve_pct: number | null;
+  walkthrough_video_url: string | null;
+  floor_plans: Json | null;
+  upgrade_strategy: string | null;
+  lrm_operating_plan: string | null;
+  key_metrics: Json | null;
+  seo_title: string | null;
+  seo_description: string | null;
+  og_image_path: string | null;
+  gate_full_memo: boolean;
+  featured_on_homepage: boolean;
+  allow_indexing: boolean;
+  assigned_advisor: string | null;
 };
 
 type MarketReportsRow = {

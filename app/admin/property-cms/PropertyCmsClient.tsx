@@ -14,6 +14,8 @@ import { Topbar, Icon } from '../AdminShell';
 // publish toggles); those render as UI placeholders so the design is
 // complete, with TODO_SCHEMA comments where a migration is required.
 
+export type PositionInMarket = 'Entry' | 'Premium' | 'Editorial' | 'Trophy';
+
 export type PropertyRow = {
   id: string;
   slug: string;
@@ -34,6 +36,30 @@ export type PropertyRow = {
   images: string[] | null;
   status: string;
   created_at: string;
+  // 20260501_property_design_columns.sql
+  sqm: number | null;
+  baths: number | null;
+  // 20260504_property_metadata.sql
+  headline: string | null;
+  position_in_market: PositionInMarket | null;
+  occupancy_low_pct: number | null;
+  occupancy_high_pct: number | null;
+  lrm_management_fee_pct: number | null;
+  cleaning_per_stay_usd: number | null;
+  property_tax_usd: number | null;
+  utilities_per_year_usd: number | null;
+  insurance_per_year_usd: number | null;
+  maintenance_reserve_pct: number | null;
+  walkthrough_video_url: string | null;
+  upgrade_strategy: string | null;
+  lrm_operating_plan: string | null;
+  seo_title: string | null;
+  seo_description: string | null;
+  og_image_path: string | null;
+  gate_full_memo: boolean | null;
+  featured_on_homepage: boolean | null;
+  allow_indexing: boolean | null;
+  assigned_advisor: string | null;
 };
 
 type Status = 'draft' | 'review' | 'published' | 'archived';
@@ -123,74 +149,160 @@ type Draft = {
   neighborhood: string;
   price_usd: number | '';
   bedrooms: number | '';
+  baths: number | '';
+  sqm: number | '';
   adr_low: number | '';
   adr_high: number | '';
   annual_gross_low: number | '';
   annual_gross_high: number | '';
+  occupancy_low_pct: number | '';
+  occupancy_high_pct: number | '';
   upgrade_potential: string;
+  headline: string;
+  position_in_market: PositionInMarket | '';
   investment_thesis: string;
   occupancy_assumption: string;
   strategy: string;
   seasonality: string;
+  upgrade_strategy: string;
+  lrm_operating_plan: string;
+  // Operating cost defaults
+  lrm_management_fee_pct: number | '';
+  cleaning_per_stay_usd: number | '';
+  property_tax_usd: number | '';
+  utilities_per_year_usd: number | '';
+  insurance_per_year_usd: number | '';
+  maintenance_reserve_pct: number | '';
+  // Media
+  walkthrough_video_url: string;
+  // Risks + images
   risks: string[];
   images: string[];
+  // SEO
+  seo_title: string;
+  seo_description: string;
+  og_image_path: string;
+  // Publish settings
+  gate_full_memo: boolean;
+  featured_on_homepage: boolean;
+  allow_indexing: boolean;
+  assigned_advisor: string;
   status: Status;
 };
 
 const EMPTY_DRAFT: Draft = {
   slug: '', name: '', neighborhood: 'Centro',
-  price_usd: '', bedrooms: '',
+  price_usd: '', bedrooms: '', baths: '', sqm: '',
   adr_low: '', adr_high: '',
   annual_gross_low: '', annual_gross_high: '',
-  upgrade_potential: '', investment_thesis: '',
-  occupancy_assumption: '', strategy: '', seasonality: '',
+  occupancy_low_pct: '', occupancy_high_pct: '',
+  upgrade_potential: '', headline: '', position_in_market: '',
+  investment_thesis: '', occupancy_assumption: '', strategy: '', seasonality: '',
+  upgrade_strategy: '', lrm_operating_plan: '',
+  lrm_management_fee_pct: '', cleaning_per_stay_usd: '',
+  property_tax_usd: '', utilities_per_year_usd: '',
+  insurance_per_year_usd: '', maintenance_reserve_pct: '',
+  walkthrough_video_url: '',
   risks: [], images: [],
+  seo_title: '', seo_description: '', og_image_path: '',
+  gate_full_memo: true,
+  featured_on_homepage: false,
+  allow_indexing: true,
+  assigned_advisor: '',
   status: 'draft',
 };
 
 function rowToDraft(r: PropertyRow): Draft {
   const status: Status = (['draft', 'review', 'published', 'archived'] as Status[]).includes(r.status as Status)
     ? (r.status as Status) : 'draft';
+  const position: PositionInMarket | '' =
+    r.position_in_market && (['Entry', 'Premium', 'Editorial', 'Trophy'] as const).includes(r.position_in_market)
+      ? r.position_in_market : '';
   return {
     slug: r.slug,
     name: r.name,
     neighborhood: r.neighborhood || 'Centro',
     price_usd: r.price_usd ?? '',
     bedrooms: r.bedrooms ?? '',
+    baths: r.baths ?? '',
+    sqm: r.sqm ?? '',
     adr_low: r.adr_low ?? '',
     adr_high: r.adr_high ?? '',
     annual_gross_low: r.annual_gross_low ?? '',
     annual_gross_high: r.annual_gross_high ?? '',
+    occupancy_low_pct: r.occupancy_low_pct ?? '',
+    occupancy_high_pct: r.occupancy_high_pct ?? '',
     upgrade_potential: r.upgrade_potential ?? '',
+    headline: r.headline ?? '',
+    position_in_market: position,
     investment_thesis: r.investment_thesis ?? '',
     occupancy_assumption: r.occupancy_assumption ?? '',
     strategy: r.strategy ?? '',
     seasonality: r.seasonality ?? '',
+    upgrade_strategy: r.upgrade_strategy ?? '',
+    lrm_operating_plan: r.lrm_operating_plan ?? '',
+    lrm_management_fee_pct:  r.lrm_management_fee_pct  ?? '',
+    cleaning_per_stay_usd:   r.cleaning_per_stay_usd   ?? '',
+    property_tax_usd:        r.property_tax_usd        ?? '',
+    utilities_per_year_usd:  r.utilities_per_year_usd  ?? '',
+    insurance_per_year_usd:  r.insurance_per_year_usd  ?? '',
+    maintenance_reserve_pct: r.maintenance_reserve_pct ?? '',
+    walkthrough_video_url:   r.walkthrough_video_url   ?? '',
     risks: r.risks ?? [],
     images: r.images ?? [],
+    seo_title:       r.seo_title       ?? '',
+    seo_description: r.seo_description ?? '',
+    og_image_path:   r.og_image_path   ?? '',
+    gate_full_memo:       r.gate_full_memo       ?? true,
+    featured_on_homepage: r.featured_on_homepage ?? false,
+    allow_indexing:       r.allow_indexing       ?? true,
+    assigned_advisor:     r.assigned_advisor     ?? '',
     status,
   };
 }
 
 function draftToPayload(d: Draft) {
   const numOrNull = (n: number | '') => (n === '' ? null : n);
+  const strOrNull = (s: string) => (s.trim() ? s.trim() : null);
   return {
     slug: d.slug.trim(),
     name: d.name.trim(),
     neighborhood: d.neighborhood.trim(),
     price_usd: numOrNull(d.price_usd),
-    bedrooms: numOrNull(d.bedrooms),
-    adr_low: numOrNull(d.adr_low),
-    adr_high: numOrNull(d.adr_high),
-    annual_gross_low: numOrNull(d.annual_gross_low),
-    annual_gross_high: numOrNull(d.annual_gross_high),
-    upgrade_potential: d.upgrade_potential.trim() || null,
-    investment_thesis: d.investment_thesis.trim() || null,
-    occupancy_assumption: d.occupancy_assumption.trim() || null,
-    strategy: d.strategy.trim() || null,
-    seasonality: d.seasonality.trim() || null,
+    bedrooms:  numOrNull(d.bedrooms),
+    baths:     numOrNull(d.baths),
+    sqm:       numOrNull(d.sqm),
+    adr_low:   numOrNull(d.adr_low),
+    adr_high:  numOrNull(d.adr_high),
+    annual_gross_low:   numOrNull(d.annual_gross_low),
+    annual_gross_high:  numOrNull(d.annual_gross_high),
+    occupancy_low_pct:  numOrNull(d.occupancy_low_pct),
+    occupancy_high_pct: numOrNull(d.occupancy_high_pct),
+    upgrade_potential: strOrNull(d.upgrade_potential),
+    headline:          strOrNull(d.headline),
+    position_in_market: d.position_in_market || null,
+    investment_thesis: strOrNull(d.investment_thesis),
+    occupancy_assumption: strOrNull(d.occupancy_assumption),
+    strategy: strOrNull(d.strategy),
+    seasonality: strOrNull(d.seasonality),
+    upgrade_strategy: strOrNull(d.upgrade_strategy),
+    lrm_operating_plan: strOrNull(d.lrm_operating_plan),
+    lrm_management_fee_pct:  numOrNull(d.lrm_management_fee_pct),
+    cleaning_per_stay_usd:   numOrNull(d.cleaning_per_stay_usd),
+    property_tax_usd:        numOrNull(d.property_tax_usd),
+    utilities_per_year_usd:  numOrNull(d.utilities_per_year_usd),
+    insurance_per_year_usd:  numOrNull(d.insurance_per_year_usd),
+    maintenance_reserve_pct: numOrNull(d.maintenance_reserve_pct),
+    walkthrough_video_url:   strOrNull(d.walkthrough_video_url),
     risks: d.risks.map(r => r.trim()).filter(Boolean),
     images: d.images.map(i => i.trim()).filter(Boolean),
+    seo_title:       strOrNull(d.seo_title),
+    seo_description: strOrNull(d.seo_description),
+    og_image_path:   strOrNull(d.og_image_path),
+    gate_full_memo:       d.gate_full_memo,
+    featured_on_homepage: d.featured_on_homepage,
+    allow_indexing:       d.allow_indexing,
+    assigned_advisor:     strOrNull(d.assigned_advisor),
     status: d.status,
   };
 }
@@ -532,7 +644,7 @@ function PropertyEditPage({
         {tab === 'media'     && <MediaTab draft={draft} update={update} />}
         {tab === 'memo'      && <MemoTab draft={draft} update={update} />}
         {tab === 'risks'     && <RisksTab draft={draft} update={update} />}
-        {tab === 'seo'       && <SeoTab draft={draft} />}
+        {tab === 'seo'       && <SeoTab draft={draft} update={update} />}
         {tab === 'publish'   && <PublishTab draft={draft} update={update} />}
 
         {toast && (
@@ -653,15 +765,27 @@ function OverviewTab({ draft, update, errors }: TabProps) {
             </div>
           </div>
 
-          {/* TODO_SCHEMA: properties.sqm + bathrooms columns. */}
           <div className='grid-2' style={{ gap: 12 }}>
             <div className='field'>
-              <label className='label'>Sq meters <span className='help'>not yet stored</span></label>
-              <input type='number' className='input' placeholder='650' />
+              <label className='label'>Sq meters</label>
+              <input
+                type='number'
+                className='input'
+                value={draft.sqm}
+                onChange={e => update('sqm', e.target.value === '' ? '' : Number(e.target.value))}
+                placeholder='650'
+              />
             </div>
             <div className='field'>
-              <label className='label'>Bathrooms <span className='help'>not yet stored</span></label>
-              <input type='number' className='input' placeholder='6.5' step='0.5' />
+              <label className='label'>Bathrooms</label>
+              <input
+                type='number'
+                className='input'
+                step='0.5'
+                value={draft.baths}
+                onChange={e => update('baths', e.target.value === '' ? '' : Number(e.target.value))}
+                placeholder='6.5'
+              />
             </div>
           </div>
         </div>
@@ -673,11 +797,16 @@ function OverviewTab({ draft, update, errors }: TabProps) {
           <span style={{ fontSize: 11, color: 'var(--fg-subtle)' }} className='mono'>Public-facing</span>
         </div>
         <div className='card-body col gap-16'>
-          {/* TODO_SCHEMA: properties.headline column. */}
           <div className='field'>
-            <label className='label'>Headline <span className='help'>not yet stored</span></label>
-            <input className='input' placeholder='Editorial-grade Centro estate with 6 suites and rooftop terrace' />
-            <div className='input-help'>Shown on the property card and at the top of the memo. Max 90 characters.</div>
+            <label className='label'>Headline</label>
+            <input
+              className='input'
+              value={draft.headline}
+              onChange={e => update('headline', e.target.value)}
+              placeholder='Editorial-grade Centro estate with 6 suites and rooftop terrace'
+              maxLength={120}
+            />
+            <div className='input-help'>Shown on the property card and at the top of the memo. {draft.headline.length}/90 ideal.</div>
           </div>
 
           <div className='field'>
@@ -706,13 +835,17 @@ function OverviewTab({ draft, update, errors }: TabProps) {
             </select>
           </div>
 
-          {/* TODO_SCHEMA: properties.position_in_market column. */}
           <div className='field'>
-            <label className='label'>Position in market <span className='help'>not yet stored</span></label>
+            <label className='label'>Position in market</label>
             <div className='row gap-6' style={{ flexWrap: 'wrap' }}>
-              {['Entry', 'Premium', 'Editorial', 'Trophy'].map((p, i) => (
+              {(['Entry', 'Premium', 'Editorial', 'Trophy'] as PositionInMarket[]).map(p => (
                 <label key={p} className='row gap-6' style={{ padding: '6px 12px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>
-                  <input type='radio' name='pos' defaultChecked={i === 1} /> {p}
+                  <input
+                    type='radio'
+                    name='pos'
+                    checked={draft.position_in_market === p}
+                    onChange={() => update('position_in_market', p)}
+                  /> {p}
                 </label>
               ))}
             </div>
@@ -740,22 +873,22 @@ function FinancialTab({ draft, update, errors }: TabProps) {
           <FieldError msg={errors?.adr} />
           <FieldError msg={errors?.rev} />
           <div className='grid-2' style={{ gap: 16 }}>
-            <NumField label='ADR — low' help='USD/night' value={draft.adr_low} addon='$' onChange={v => update('adr_low', v)} error={!!errors?.adr} />
+            <NumField label='ADR — low'  help='USD/night' value={draft.adr_low}  addon='$' onChange={v => update('adr_low',  v)} error={!!errors?.adr} />
             <NumField label='ADR — high' help='USD/night' value={draft.adr_high} addon='$' onChange={v => update('adr_high', v)} error={!!errors?.adr} />
-            {/* TODO_SCHEMA: separate occupancy_low/high columns; for now the
-                free-text occupancy_assumption captures both. */}
-            <div className='field'>
-              <label className='label'>Occupancy assumption</label>
-              <input
-                className='input'
-                value={draft.occupancy_assumption}
-                onChange={e => update('occupancy_assumption', e.target.value)}
-                placeholder='~62%'
-              />
-            </div>
-            <div />
-            <NumField label='Gross revenue — low'  value={draft.annual_gross_low}  addon='$' onChange={v => update('annual_gross_low', v)}  error={!!errors?.rev} />
+            <NumField label='Occupancy — low'  help='%' value={draft.occupancy_low_pct}  addon='%' onChange={v => update('occupancy_low_pct',  v)} />
+            <NumField label='Occupancy — high' help='%' value={draft.occupancy_high_pct} addon='%' onChange={v => update('occupancy_high_pct', v)} />
+            <NumField label='Gross revenue — low'  value={draft.annual_gross_low}  addon='$' onChange={v => update('annual_gross_low',  v)} error={!!errors?.rev} />
             <NumField label='Gross revenue — high' value={draft.annual_gross_high} addon='$' onChange={v => update('annual_gross_high', v)} error={!!errors?.rev} />
+          </div>
+          <div className='divider' />
+          <div className='field'>
+            <label className='label'>Occupancy caption <span className='help'>free-text · shown on the public memo</span></label>
+            <input
+              className='input'
+              value={draft.occupancy_assumption}
+              onChange={e => update('occupancy_assumption', e.target.value)}
+              placeholder='Targeting 62% post-upgrade; conservative case 55%'
+            />
           </div>
           <div className='divider' />
           <div className='field'>
@@ -772,20 +905,18 @@ function FinancialTab({ draft, update, errors }: TabProps) {
         </div>
       </div>
 
-      {/* TODO_SCHEMA: per-line operating cost columns. UI is rendered for
-          design fidelity; values are not yet persisted. */}
       <div className='card'>
         <div className='card-head'>
           <h3 className='card-title'>Operating assumptions</h3>
-          <span className='card-subtitle'>not yet stored</span>
+          <span className='card-subtitle'>per-property defaults · used by the public memo</span>
         </div>
         <div className='card-body grid-3' style={{ gap: 16 }}>
-          <PlaceholderField label='LRM management fee' addon='%' defaultValue='20' />
-          <PlaceholderField label='Cleaning per stay'  addon='$' defaultValue='280' addonLeft />
-          <PlaceholderField label='Property tax'        addon='$' defaultValue='2400' addonLeft />
-          <PlaceholderField label='Utilities/yr'        addon='$' defaultValue='14000' addonLeft />
-          <PlaceholderField label='Insurance/yr'        addon='$' defaultValue='6800' addonLeft />
-          <PlaceholderField label='Maintenance reserve' addon='%' defaultValue='3' />
+          <NumField label='LRM management fee' help='%' value={draft.lrm_management_fee_pct} addon='%' onChange={v => update('lrm_management_fee_pct', v)} />
+          <NumField label='Cleaning per stay'  help='USD' value={draft.cleaning_per_stay_usd} addon='$' onChange={v => update('cleaning_per_stay_usd',  v)} />
+          <NumField label='Property tax'       help='USD/yr' value={draft.property_tax_usd}        addon='$' onChange={v => update('property_tax_usd',        v)} />
+          <NumField label='Utilities/yr'       help='USD' value={draft.utilities_per_year_usd}  addon='$' onChange={v => update('utilities_per_year_usd',  v)} />
+          <NumField label='Insurance/yr'       help='USD' value={draft.insurance_per_year_usd}  addon='$' onChange={v => update('insurance_per_year_usd',  v)} />
+          <NumField label='Maintenance reserve' help='% of gross' value={draft.maintenance_reserve_pct} addon='%' onChange={v => update('maintenance_reserve_pct', v)} />
         </div>
       </div>
     </div>
@@ -813,26 +944,6 @@ function NumField({
           value={value}
           onChange={e => onChange(e.target.value === '' ? '' : Number(e.target.value))}
         />
-      </div>
-    </div>
-  );
-}
-
-function PlaceholderField({
-  label, addon, defaultValue, addonLeft = false,
-}: {
-  label: string;
-  addon: string;
-  defaultValue: string;
-  addonLeft?: boolean;
-}) {
-  return (
-    <div className='field'>
-      <label className='label'>{label}</label>
-      <div className='input-group'>
-        {addonLeft && <div className='addon'>{addon}</div>}
-        <input type='number' className='input' defaultValue={defaultValue} />
-        {!addonLeft && <div className='addon'>{addon}</div>}
       </div>
     </div>
   );
@@ -917,19 +1028,23 @@ function MediaTab({ draft, update }: TabProps) {
         </div>
       </div>
 
-      {/* TODO_SCHEMA: walkthrough_video_url + floor_plans[] columns. */}
       <div className='card'>
         <div className='card-head'>
           <div>
             <h3 className='card-title'>Walkthrough video</h3>
-            <p className='card-subtitle'>not yet stored · paste a YouTube/Vimeo URL — appears in the property memo</p>
+            <p className='card-subtitle'>YouTube / Vimeo / direct MP4 URL — embedded in the property memo. Floor plans and PDF docs upload via the Media Library.</p>
           </div>
         </div>
         <div className='card-body'>
-          <div style={{ border: '2px dashed var(--border-strong)', borderRadius: 8, padding: '24px 16px', textAlign: 'center', color: 'var(--fg-muted)' }}>
-            <Icon name='play' style={{ width: 28, height: 28, opacity: 0.4, marginBottom: 6 }} />
-            <div style={{ fontSize: 13 }}>No video attached</div>
-            <div className='muted' style={{ fontSize: 11, marginTop: 4 }}>Drone aerial or interior walkthrough recommended · 60–180 seconds · 1080p+</div>
+          <div className='field'>
+            <label className='label'>Video URL</label>
+            <input
+              className='input'
+              value={draft.walkthrough_video_url}
+              onChange={e => update('walkthrough_video_url', e.target.value)}
+              placeholder='https://youtu.be/… · https://vimeo.com/… · https://…/walkthrough.mp4'
+            />
+            <div className='input-help'>Drone aerial or interior walkthrough recommended · 60–180 seconds · 1080p+</div>
           </div>
         </div>
       </div>
@@ -937,10 +1052,12 @@ function MediaTab({ draft, update }: TabProps) {
   );
 }
 
-const MEMO_SECTIONS: Array<{ key: 'investment_thesis' | 'strategy' | 'seasonality'; title: string; sub: string }> = [
-  { key: 'investment_thesis', title: 'Investment thesis',     sub: 'Why this property is positioned for outperformance.' },
-  { key: 'strategy',          title: 'Operating strategy',    sub: 'Channel mix, pricing strategy, on-site team.' },
-  { key: 'seasonality',       title: 'Seasonality & demand',  sub: 'Year-round revenue pattern and peak/trough months.' },
+const MEMO_SECTIONS: Array<{ key: 'investment_thesis' | 'upgrade_strategy' | 'strategy' | 'lrm_operating_plan' | 'seasonality'; title: string; sub: string }> = [
+  { key: 'investment_thesis',  title: 'Investment thesis',    sub: 'Why this property is positioned for outperformance.' },
+  { key: 'upgrade_strategy',   title: 'Upgrade strategy',     sub: 'Capex priorities, target ADR lift, payback timeline.' },
+  { key: 'strategy',           title: 'Operating strategy',   sub: 'Channel mix, pricing strategy, on-site team.' },
+  { key: 'lrm_operating_plan', title: 'LRM operating plan',   sub: 'Day-to-day execution: photography, listings, restocking, owner reporting.' },
+  { key: 'seasonality',        title: 'Seasonality & demand', sub: 'Year-round revenue pattern and peak/trough months.' },
 ];
 
 function MemoTab({ draft, update }: TabProps) {
@@ -966,13 +1083,6 @@ function MemoTab({ draft, update }: TabProps) {
         </div>
       ))}
 
-      {/* TODO_SCHEMA: dedicated columns for upgrade_strategy + key_metrics +
-          lrm_operating_plan to fully match the design's 5 memo subsections. */}
-      <div className='card' style={{ background: 'var(--bg-subtle)', borderStyle: 'dashed' }}>
-        <div className='card-body' style={{ fontSize: 12, color: 'var(--fg-muted)' }}>
-          Two more memo sections — <em>upgrade strategy</em> and <em>LRM operating plan</em> — are wireframed in the design but require new schema columns to persist. The three sections above already round-trip to the database.
-        </div>
-      </div>
     </div>
   );
 }
@@ -1021,14 +1131,12 @@ function RisksTab({ draft, update }: TabProps) {
   );
 }
 
-function SeoTab({ draft }: { draft: Draft }) {
-  // TODO_SCHEMA: properties.seo_title + seo_description + og_image columns.
-  // The slug echo below is the canonical slug used to build the public URL.
+function SeoTab({ draft, update }: TabProps) {
   return (
     <div className='card'>
       <div className='card-head'>
         <h3 className='card-title'>SEO</h3>
-        <p className='card-subtitle'>Used for search engines and social sharing · all fields below are not yet persisted (schema migration required)</p>
+        <p className='card-subtitle'>Used for search engines and social sharing</p>
       </div>
       <div className='card-body col gap-16'>
         <div className='field'>
@@ -1040,18 +1148,38 @@ function SeoTab({ draft }: { draft: Draft }) {
           <div className='input-help'>Edit the slug on the Overview tab.</div>
         </div>
         <div className='field'>
-          <label className='label'>SEO title <span className='help'>60 chars max</span></label>
-          <input className='input' placeholder='Casa de los Olivos · 6BR Centro Investment Property' />
+          <label className='label'>SEO title <span className='help'>{draft.seo_title.length}/60</span></label>
+          <input
+            className='input'
+            value={draft.seo_title}
+            onChange={e => update('seo_title', e.target.value)}
+            placeholder='Casa de los Olivos · 6BR Centro Investment Property'
+          />
         </div>
         <div className='field'>
-          <label className='label'>Meta description <span className='help'>155 chars max</span></label>
-          <textarea className='textarea' rows={2} />
+          <label className='label'>Meta description <span className='help'>{draft.seo_description.length}/155</span></label>
+          <textarea
+            className='textarea'
+            rows={2}
+            value={draft.seo_description}
+            onChange={e => update('seo_description', e.target.value)}
+            placeholder='Curated 6BR colonial in the heart of Centro · 4 yr P&L published · ADR $612'
+          />
         </div>
         <div className='field'>
-          <label className='label'>Open Graph image</label>
-          <div style={{ aspectRatio: '1.91/1', maxWidth: 380, background: 'var(--bg-subtle)', border: '1px dashed var(--border-strong)', borderRadius: 6, display: 'grid', placeItems: 'center', color: 'var(--fg-subtle)' }}>
-            <Icon name='upload' />
-          </div>
+          <label className='label'>Open Graph image <span className='help'>1200×630 · paste a Media Library path or absolute URL</span></label>
+          <input
+            className='input'
+            value={draft.og_image_path}
+            onChange={e => update('og_image_path', e.target.value)}
+            placeholder='properties/casa-olivos/og.jpg'
+          />
+          {draft.og_image_path && (
+            <div style={{ aspectRatio: '1.91/1', maxWidth: 380, background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: 6, marginTop: 8, overflow: 'hidden' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={draft.og_image_path.startsWith('http') ? draft.og_image_path : `/${draft.og_image_path.replace(/^\/+/, '')}`} alt='' style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -1098,24 +1226,40 @@ function PublishTab({ draft, update }: TabProps) {
         </div>
       </div>
 
-      {/* TODO_SCHEMA: gate_full_memo + featured_on_homepage + allow_indexing
-          + assigned_advisor columns. UI rendered for design fidelity. */}
       <div className='card'>
         <div className='card-head'>
           <h3 className='card-title'>Lead capture</h3>
-          <span className='card-subtitle'>not yet stored</span>
+          <span className='card-subtitle'>controls how the public site treats this listing</span>
         </div>
         <div className='card-body col gap-16'>
-          <ToggleRow defaultChecked title='Gate full memo' desc='Require email + phone before showing detailed financials' />
-          <ToggleRow                title='Featured on homepage' desc='Surface in the Featured Properties module' />
-          <ToggleRow defaultChecked title='Allow indexing' desc='Include in sitemap and search results' />
+          <ToggleRow
+            checked={draft.gate_full_memo}
+            onChange={v => update('gate_full_memo', v)}
+            title='Gate full memo'
+            desc='Require email + phone before showing detailed financials'
+          />
+          <ToggleRow
+            checked={draft.featured_on_homepage}
+            onChange={v => update('featured_on_homepage', v)}
+            title='Featured on homepage'
+            desc='Surface in the Featured Properties module'
+          />
+          <ToggleRow
+            checked={draft.allow_indexing}
+            onChange={v => update('allow_indexing', v)}
+            title='Allow indexing'
+            desc='Include in sitemap and search results'
+          />
           <div className='divider' />
           <div className='field'>
             <label className='label'>Assigned advisor</label>
-            <select className='select'>
-              <option>Justin McCarter</option>
-              <option>Maria Santos</option>
-            </select>
+            <input
+              className='input'
+              value={draft.assigned_advisor}
+              onChange={e => update('assigned_advisor', e.target.value)}
+              placeholder='Justin McCarter'
+            />
+            <div className='input-help'>Free-text for now. Becomes a select once the team table ships.</div>
           </div>
         </div>
       </div>
@@ -1124,12 +1268,21 @@ function PublishTab({ draft, update }: TabProps) {
 }
 
 function ToggleRow({
-  defaultChecked = false, title, desc,
-}: { defaultChecked?: boolean; title: string; desc: string }) {
+  checked, onChange, title, desc,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  title: string;
+  desc: string;
+}) {
   return (
     <label className='row gap-12' style={{ padding: 10, cursor: 'pointer' }}>
       <span className='switch'>
-        <input type='checkbox' defaultChecked={defaultChecked} />
+        <input
+          type='checkbox'
+          checked={checked}
+          onChange={e => onChange(e.target.checked)}
+        />
         <span className='switch-track' />
       </span>
       <div>
