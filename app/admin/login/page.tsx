@@ -2,38 +2,15 @@
 
 import { Suspense, useEffect, useState, type FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { getSupabaseBrowserAuthClient } from '@/lib/supabase/auth-browser';
 
-// Faithful port of design admin/login.html — split-card sign-in panel
-// on a dark background. The auth flow is mock (localStorage-only) per
-// the design; replacing it with Supabase Auth is a future migration
-// (TODO_AUTH).
-
-const SESSION_KEY = 'investsma_session';
-
-type Session = {
-  email: string;
-  name: string;
-  initials: string;
-  role: string;
-  loggedInAt: number;
-  expiresAt: number;
-};
-
-function persist(s: Session) {
-  try { localStorage.setItem(SESSION_KEY, JSON.stringify(s)); } catch {}
-}
-
-function buildSession(email: string, remember: boolean): Session {
-  const name = email.split('@')[0].split('.').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
-  return {
-    email,
-    name,
-    initials: email.slice(0, 2).toUpperCase(),
-    role: 'Operator',
-    loggedInAt: Date.now(),
-    expiresAt: Date.now() + (remember ? 30 : 1) * 24 * 60 * 60 * 1000,
-  };
-}
+// Real Supabase Auth (email + password) gated behind the design's
+// dark-card sign-in. Sessions are cookie-based and managed by
+// @supabase/ssr; the middleware reads the same cookies to gate the
+// rest of /admin/* and /api/admin/*. Google SSO is wired via
+// signInWithOAuth and bounces through /admin/auth/callback (TODO:
+// configure the provider in the Supabase dashboard before the button
+// goes live for real users).
 
 export default function LoginPage() {
   return (
@@ -48,40 +25,55 @@ function LoginCard() {
   const searchParams = useSearchParams();
   const next = searchParams?.get('next') || '/admin';
 
-  const [email, setEmail] = useState('justin@luxrentalmgmt.com');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // If already signed in, redirect to next.
+  // If already signed in, redirect to `next`.
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(SESSION_KEY);
-      if (!raw) return;
-      const s = JSON.parse(raw) as Session;
-      if (s.expiresAt > Date.now()) router.replace(next);
-    } catch {}
+    const supabase = getSupabaseBrowserAuthClient();
+    supabase.auth.getUser().then(({ data }) => {
+      if (data?.user) router.replace(next);
+    });
   }, [router, next]);
 
-  const submit = (e: FormEvent<HTMLFormElement>) => {
+  const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!email || !password) { setErr('Email and password are required.'); return; }
-    if (password.length < 3) { setErr('Password too short (demo accepts any password ≥ 3 chars).'); return; }
     setErr(null); setBusy(true);
-    // Simulate latency for the demo flow.
-    setTimeout(() => {
-      persist(buildSession(email, remember));
+    try {
+      const supabase = getSupabaseBrowserAuthClient();
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      // The "remember me" toggle is informational here — Supabase Auth
+      // honors its own session-length config in the dashboard. Surface
+      // it in the JWT app_metadata if you ever want different TTLs.
+      void remember;
       router.replace(next);
-    }, 600);
+      router.refresh();
+    } catch (e) {
+      setErr((e as Error).message || 'Sign-in failed.');
+      setBusy(false);
+    }
   };
 
-  const ssoLogin = () => {
+  const ssoLogin = async () => {
     setErr(null); setBusy(true);
-    setTimeout(() => {
-      persist(buildSession('justin@luxrentalmgmt.com', true));
-      router.replace(next);
-    }, 600);
+    try {
+      const supabase = getSupabaseBrowserAuthClient();
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/admin/auth/callback?next=${encodeURIComponent(next)}`,
+        },
+      });
+      if (error) throw error;
+    } catch (e) {
+      setErr((e as Error).message || 'Google sign-in is not configured yet.');
+      setBusy(false);
+    }
   };
 
   return (
@@ -105,21 +97,6 @@ function LoginCard() {
         <div style={{ fontSize: 22, fontWeight: 600, marginBottom: 6 }}>Sign in to your workspace</div>
         <div style={{ fontSize: 13, color: 'rgba(245,239,226,0.55)', marginBottom: 32, lineHeight: 1.5 }}>
           Operator access to leads, properties, market data, and CMS.
-        </div>
-
-        <div style={{
-          background: 'rgba(201,165,90,0.08)',
-          border: '1px solid rgba(201,165,90,0.2)',
-          color: '#DAB76C',
-          padding: '10px 14px',
-          borderRadius: 4,
-          fontSize: 12,
-          marginBottom: 24,
-          fontFamily: 'var(--f-mono)',
-          lineHeight: 1.5,
-        }}>
-          <strong style={{ color: '#C9A55A' }}>Demo:</strong> any email + password works.<br />
-          Try <strong style={{ color: '#C9A55A' }}>justin@luxrentalmgmt.com</strong> / <strong style={{ color: '#C9A55A' }}>demo</strong>
         </div>
 
         {err && (
