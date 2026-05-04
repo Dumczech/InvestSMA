@@ -17,6 +17,8 @@ type Form = {
   timeline: string;
   interests: string[];
   message: string;
+  /** Honeypot — never set by real users. */
+  website: string;
 };
 
 type ContactOptions = {
@@ -91,6 +93,7 @@ export default function ContactClient({
   const [form, setForm] = useState<Form>({
     name: '', email: '', phone: '',
     budget: '', timeline: '', interests: [], message: '',
+    website: '',
   });
   const [appNum] = useState(() => Math.floor(Math.random() * 9000) + 1000);
 
@@ -115,6 +118,7 @@ export default function ContactClient({
           buyerType: form.interests.join(', '),
           message: form.message,
           sourcePage: '/contact',
+          website: form.website,
         }),
       });
     } catch {
@@ -471,6 +475,22 @@ export default function ContactClient({
                     {busy ? 'Submitting…' : copy.submit_label}
                   </button>
                 </div>
+                {/* Honeypot — visually hidden + tab-skipped + autocomplete-off.
+                    Real users never fill this; bots that auto-populate every
+                    field will, and the API silently 200s without recording. */}
+                <label
+                  aria-hidden='true'
+                  style={{ position: 'absolute', left: '-9999px', top: 'auto', width: 1, height: 1, overflow: 'hidden' }}
+                >
+                  Website
+                  <input
+                    type='text'
+                    tabIndex={-1}
+                    autoComplete='off'
+                    value={form.website}
+                    onChange={e => setForm(s => ({ ...s, website: e.target.value }))}
+                  />
+                </label>
                 <div
                   className='mono'
                   style={{

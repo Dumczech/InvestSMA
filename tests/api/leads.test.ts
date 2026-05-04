@@ -21,11 +21,24 @@ vi.mock('resend', () => ({
 }));
 
 import { POST } from '@/app/api/leads/route';
+import { _resetRateLimit } from '@/lib/security/rate-limit';
 
-function makeReq(body: unknown) {
+let ipCounter = 0;
+function uniqueIp() {
+  // Each request gets a fresh IP so rate-limit state doesn't leak
+  // across tests within a describe block.
+  ipCounter += 1;
+  return `10.0.0.${ipCounter % 254}`;
+}
+
+function makeReq(body: unknown, headers: Record<string, string> = {}) {
   return new Request('http://test.local/api/leads', {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type': 'application/json',
+      'x-forwarded-for': uniqueIp(),
+      ...headers,
+    },
     body: JSON.stringify(body),
   }) as unknown as import('next/server').NextRequest;
 }
@@ -36,6 +49,8 @@ describe('POST /api/leads', () => {
   beforeEach(() => {
     insertMock.mockReset();
     sendMock.mockReset();
+    _resetRateLimit();
+    ipCounter = 0;
     delete process.env.RESEND_API_KEY;
     delete process.env.LEAD_NOTIFY_TO;
     delete process.env.LEAD_NOTIFY_FROM;
@@ -128,5 +143,60 @@ describe('POST /api/leads', () => {
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: true });
+  });
+
+  it('silently 200s when the honeypot field is filled (no DB write, no email)', async () => {
+    const res = await POST(makeReq({
+      name: 'BotName', email: 'bot@example.com',
+      website: 'https://spammer.example',
+    }));
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true });
+    expect(insertMock).not.toHaveBeenCalled();
+    expect(sendMock).not.toHaveBeenCalled();
+  });
+
+  it('400s on missing name or invalid email', async () => {
+    let res = await POST(makeReq({ email: 'a@b.co' }));
+    expect(res.status).toBe(400);
+
+    res = await POST(makeReq({ name: 'Gus', email: 'not-an-email' }));
+    expect(res.status).toBe(400);
+
+    res = await POST(makeReq({ name: '   ', email: 'a@b.co' }));
+    expect(res.status).toBe(400);
+
+    expect(insertMock).not.toHaveBeenCalled();
+  });
+
+  it('rate-limits a single IP after 5 submissions in the window', async () => {
+    insertMock.mockResolvedValue({ error: null });
+    const ip = '203.0.113.42';
+    const headers = { 'x-forwarded-for': ip };
+    const body = { name: 'Hugh', email: 'hugh@example.com' };
+
+    for (let i = 0; i < 5; i++) {
+      const res = await POST(makeReq(body, headers));
+      expect(res.status).toBe(200);
+    }
+    const sixth = await POST(makeReq(body, headers));
+    expect(sixth.status).toBe(429);
+    expect(sixth.headers.get('Retry-After')).toBeTruthy();
+    expect((await sixth.json()).error).toMatch(/Too many/);
+
+    expect(insertMock).toHaveBeenCalledTimes(5);
+  });
+
+  it('does not rate-limit submissions from different IPs', async () => {
+    insertMock.mockResolvedValue({ error: null });
+    for (let i = 0; i < 6; i++) {
+      const res = await POST(makeReq(
+        { name: 'Iris', email: 'iris@example.com' },
+        { 'x-forwarded-for': `198.51.100.${i + 1}` },
+      ));
+      expect(res.status).toBe(200);
+    }
+    expect(insertMock).toHaveBeenCalledTimes(6);
   });
 });
