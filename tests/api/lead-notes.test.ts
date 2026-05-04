@@ -3,7 +3,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const orderMock = vi.fn();
 const eqOrderMock = vi.fn(() => ({ order: orderMock }));
 const singleMock = vi.fn();
-const insertChain = vi.fn(() => ({ select: () => ({ single: singleMock }) }));
+const insertChain: ReturnType<typeof vi.fn> & ((row: Record<string, unknown>) => unknown) =
+  vi.fn(() => ({ select: () => ({ single: singleMock }) })) as never;
 
 vi.mock('@/lib/supabase/server', () => ({
   getSupabaseServerClient: () => ({
