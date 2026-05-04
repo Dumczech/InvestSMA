@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Topbar, Icon } from '../AdminShell';
+import { MEDIA_LIMITS_TEXT } from '@/lib/media/limits';
 
 // Folder tree sidebar, grid + list views, search / kind filter / sort,
 // multi-select bulk actions, and a detail drawer over the
@@ -651,7 +652,10 @@ function UploadModal({ onClose, onUploaded }: { onClose: () => void; onUploaded:
       <div className='modal' onClick={e => e.stopPropagation()} style={{ width: 'min(560px, calc(100vw - 32px))' }}>
         <div className='modal-head'>
           <h3 className='modal-title'>Upload asset</h3>
-          <p className='modal-desc'>Pushes to the <code>investsma-assets</code> Supabase bucket and registers metadata in <code>media_assets</code>.</p>
+          <p className='modal-desc'>
+            Pushes to the <code>investsma-assets</code> Supabase bucket and registers metadata in <code>media_assets</code>.
+            Images larger than {MEDIA_LIMITS_TEXT.maxEdge} on the long edge are auto-resized; max upload {MEDIA_LIMITS_TEXT.maxFile}, min image {MEDIA_LIMITS_TEXT.minDims}.
+          </p>
         </div>
         <form onSubmit={onSubmit}>
           <div className='modal-body' style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>

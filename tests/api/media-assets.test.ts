@@ -28,6 +28,22 @@ vi.mock('@/lib/supabase/server', () => ({
   }),
 }));
 
+// Mock the image processor so tests don't pull sharp into the test
+// runner. Default behavior is a pass-through that reports realistic
+// dimensions; individual tests override per-call with mockImplementationOnce.
+const processUploadMock = vi.fn();
+vi.mock('@/lib/media/process', () => {
+  class MediaValidationError extends Error {
+    status = 400;
+    constructor(msg: string) { super(msg); this.name = 'MediaValidationError'; }
+  }
+  return {
+    processUpload: (file: File) => processUploadMock(file),
+    MediaValidationError,
+  };
+});
+import { MediaValidationError } from '@/lib/media/process';
+
 import { GET, POST } from '@/app/api/admin/media-assets/route';
 
 describe('GET /api/admin/media-assets', () => {
@@ -129,6 +145,15 @@ describe('POST /api/admin/media-assets — multipart upload flow', () => {
     storageUploadMock.mockReset();
     insertMock.mockReset();
     storageFromMock.mockClear();
+    processUploadMock.mockReset();
+    processUploadMock.mockImplementation(async (file: File) => ({
+      buffer: Buffer.from(await file.arrayBuffer()),
+      contentType: file.type,
+      size_bytes: file.size,
+      width: 1200,
+      height: 800,
+      processed: file.type.startsWith('image/'),
+    }));
   });
 
   it('uploads to investsma-assets and inserts the metadata row', async () => {
@@ -148,7 +173,7 @@ describe('POST /api/admin/media-assets — multipart upload flow', () => {
 
     const res = await POST(req);
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true });
+    expect(await res.json()).toEqual(expect.objectContaining({ ok: true, processed: true }));
     expect(storageFromMock).toHaveBeenCalledWith('investsma-assets');
     expect(storageUploadMock).toHaveBeenCalledTimes(1);
     expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({
@@ -159,6 +184,8 @@ describe('POST /api/admin/media-assets — multipart upload flow', () => {
       uploaded_by: 'admin',
       name: 'casa.jpg',
       size_bytes: 3,
+      width: 1200,
+      height: 800,
       folder: 'property',
       tags: [],
     }));
@@ -206,5 +233,26 @@ describe('POST /api/admin/media-assets — multipart upload flow', () => {
     const res = await POST(req);
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ ok: false, error: 'Missing file' });
+  });
+
+  it('surfaces a 400 when the processor rejects the file (size / dims)', async () => {
+    processUploadMock.mockImplementationOnce(async () => {
+      throw new MediaValidationError('Image is 200×200 · minimum is 600×400.');
+    });
+
+    const fd = new FormData();
+    fd.set('file', new File([new Uint8Array([1])], 'tiny.jpg', { type: 'image/jpeg' }));
+
+    const req = new Request('http://test.local/api/admin/media-assets', {
+      method: 'POST',
+      body: fd,
+    }) as unknown as import('next/server').NextRequest;
+
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/minimum is/);
+    // Storage upload should never have been attempted.
+    expect(storageUploadMock).not.toHaveBeenCalled();
+    expect(insertMock).not.toHaveBeenCalled();
   });
 });
