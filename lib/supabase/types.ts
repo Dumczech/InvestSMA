@@ -150,6 +150,13 @@ type MediaAssetsRow = {
   module: string | null;
   alt_text: string | null;
   uploaded_by: string | null;
+  name: string | null;
+  folder: string | null;
+  size_bytes: number | null;
+  width: number | null;
+  height: number | null;
+  duration_ms: number | null;
+  tags: string[] | null;
 };
 
 type ImportJobsRow = {
