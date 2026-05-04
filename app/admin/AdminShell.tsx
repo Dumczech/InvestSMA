@@ -29,10 +29,16 @@ const NAV: Array<{ section: string; items: NavItem[] }> = [
   {
     section: 'Data',
     items: [
-      { id: 'metrics',  label: 'Metrics & Stats',     icon: 'pulse',  href: '/admin/analytics' },
       { id: 'market',   label: 'Market Data',         icon: 'chart',  href: '/admin/market-warehouse' },
       { id: 'airdna',   label: 'AirDNA Benchmarks',   icon: 'calc',   href: '/admin/audit-logs' },
       { id: 'import',   label: 'CSV Import',          icon: 'upload', href: '/admin/import-center' },
+    ],
+  },
+  {
+    section: 'Integrations',
+    items: [
+      { id: 'metrics', label: 'Site Analytics', icon: 'pulse', href: '/admin/analytics' },
+      { id: 'guesty',  label: 'Guesty',         icon: 'link',  href: '/admin/guesty' },
     ],
   },
 ];
