@@ -855,5 +855,7 @@ td .row-sub { color: var(--fg-subtle); font-size: 12px; }
   .media-layout { grid-template-columns: 1fr; }
   .media-sidebar { border-right: none; border-bottom: 1px solid var(--border); }
   .fix-row { grid-template-columns: 1fr; }
+  .logos-grid { grid-template-columns: 1fr; }
+  .og-grid { grid-template-columns: 1fr !important; }
 }
 .grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
