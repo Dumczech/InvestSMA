@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
+import { rateLimit } from '@/lib/security/rate-limit';
 
 // Default fallbacks if env isn't configured. Override per-environment
 // via RESEND_API_KEY, LEAD_NOTIFY_TO, LEAD_NOTIFY_FROM.
 const DEFAULT_NOTIFY_TO   = 'justin@luxrentalmgmt.com';
 const DEFAULT_NOTIFY_FROM = 'InvestSMA <leads@investsma.com>';
+
+// 5 lead submissions per IP per 10 minutes. Honest investors fill out
+// the form once; this caps drive-by spam without inconveniencing the
+// real path.
+const RATE_LIMIT_MAX = 5;
+const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 
 type LeadInput = {
   name: string;
@@ -17,15 +24,50 @@ type LeadInput = {
   neighborhoods?: string[] | null;
   message?: string | null;
   sourcePage?: string | null;
+  /** Honeypot. Real users never see this field; bots that auto-fill
+   *  every input will populate it. We pretend the request succeeded
+   *  so the bot doesn't learn what to evade. */
+  website?: string;
 };
+
+function clientIp(req: NextRequest): string {
+  const fwd = req.headers.get('x-forwarded-for');
+  if (fwd) return fwd.split(',')[0]!.trim();
+  return req.headers.get('x-real-ip') || 'unknown';
+}
 
 export async function POST(req: NextRequest) {
   const body = (await req.json()) as LeadInput;
+
+  // Honeypot: silently 200 so bots don't learn the trap exists.
+  if (typeof body.website === 'string' && body.website.trim().length > 0) {
+    return NextResponse.json({ ok: true });
+  }
+
+  // Rate limit by client IP.
+  const ip = clientIp(req);
+  const rl = rateLimit(`leads:${ip}`, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { ok: false, error: 'Too many submissions. Try again shortly.' },
+      { status: 429, headers: { 'Retry-After': Math.ceil(rl.retryAfterMs / 1000).toString() } },
+    );
+  }
+
+  // Light input validation. Email is the one field we actually need
+  // to do anything useful with — reject obviously bogus values
+  // before hitting the DB.
+  const email = (body.email ?? '').trim();
+  const name = (body.name ?? '').trim();
+  if (!name || !email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return NextResponse.json({ ok: false, error: 'Name and a valid email are required.' }, { status: 400 });
+  }
+
   try {
     const supabase = getSupabaseServerClient();
     const { error } = await supabase.from('leads').insert({
-      name: body.name,
-      email: body.email,
+      name,
+      email,
       phone: body.phone ?? null,
       budget: body.budget ?? null,
       timeline: body.timeline ?? null,

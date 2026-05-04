@@ -127,7 +127,9 @@ describe('POST /api/admin/market-reports', () => {
       gated: false,
       published: false,
     }));
-    expect(updateMock.mock.calls[0][0]).not.toHaveProperty('download_count');
+    const calls = updateMock.mock.calls as unknown as Array<[Record<string, unknown>]>;
+    expect(calls.length).toBeGreaterThan(0);
+    expect(calls[0][0]).not.toHaveProperty('download_count');
   });
 
   it('returns 500 with the error message when Supabase fails on insert', async () => {
