@@ -64,6 +64,7 @@ describe('POST /api/leads', () => {
       neighborhoods: null,
       message: null,
       source_page: '/contact',
+      status: 'new',
     });
   });
 

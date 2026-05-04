@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
       neighborhoods: body.neighborhoods ?? null,
       message: body.message ?? null,
       source_page: body.sourcePage ?? 'unknown',
+      status: 'new',
     });
     if (error) throw error;
 
