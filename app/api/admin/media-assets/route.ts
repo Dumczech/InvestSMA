@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
+import { processUpload, MediaValidationError } from '@/lib/media/process';
 
 export async function GET() {
   try {
@@ -64,32 +65,47 @@ export async function POST(req: NextRequest) {
     const tags = tagsRaw.split(',').map(t => t.trim()).filter(Boolean);
     if (!file) return NextResponse.json({ ok: false, error: 'Missing file' }, { status: 400 });
 
+    // Resize / re-encode large images, reject anything that violates
+    // the size or minimum-dimension limits. Non-image files pass
+    // through untouched.
+    const processed = await processUpload(file);
+
     const s = getSupabaseServerClient();
     // Path = <folder>/<timestamp>-<original-name> so the bucket
     // organizes naturally for Supabase Studio browsing too.
     const folderSegment = folderInput ? `${folderInput.replace(/^\/+|\/+$/g, '')}/` : '';
     const filePath = `${folderSegment}${Date.now()}-${file.name}`;
-    const arr = await file.arrayBuffer();
     const { error: uploadError } = await s.storage
       .from('investsma-assets')
-      .upload(filePath, arr, { contentType: file.type, upsert: true });
+      .upload(filePath, processed.buffer, { contentType: processed.contentType, upsert: true });
     if (uploadError) throw uploadError;
 
     const { error } = await s.from('media_assets').insert({
       storage_bucket: 'investsma-assets',
       storage_path: filePath,
-      mime_type: file.type,
+      mime_type: processed.contentType,
       module: moduleInput,
       folder: folderInput || moduleInput || null,
       name: file.name,
-      size_bytes: file.size,
+      size_bytes: processed.size_bytes,
+      width:  processed.width,
+      height: processed.height,
       alt_text: altText,
       tags,
       uploaded_by: 'admin',
     });
     if (error) throw error;
-    return NextResponse.json({ ok: true });
-  } catch {
+    return NextResponse.json({
+      ok: true,
+      processed: processed.processed,
+      size_bytes: processed.size_bytes,
+      width:  processed.width,
+      height: processed.height,
+    });
+  } catch (e) {
+    if (e instanceof MediaValidationError) {
+      return NextResponse.json({ ok: false, error: e.message }, { status: e.status });
+    }
     return NextResponse.json({ ok: false, error: 'Upload failed (configure Supabase bucket and env).' }, { status: 500 });
   }
 }
