@@ -1,135 +1,213 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Disclaimer, StickyCTA } from '@/components/site';
+import { GUIDE_PARTS, GUIDE_CHAPTERS, PART_SUMMARIES } from './data';
+import { PartDivider } from './blocks';
+import { CHAPTERS_LIST } from './chapters';
 
-// Faithful port of design guide.jsx — long-form orientation TOC for the
-// 8-chapter Buyer's Guide. Chapter content is editorial / static for
-// now and can later be sourced from the articles table.
+// Faithful port of design guide.jsx — 31 chapters across 7 parts.
+// Hero → editorial intro → TOC → interleaved (PartDivider, Chapter)
+// → final CTA → source notes → disclaimer → sticky CTA.
 
 export const metadata: Metadata = {
   title: "The Buyer's Guide · InvestSMA",
   description:
-    "8 chapters of San Miguel de Allende real estate buyer education — neighborhoods, acquisition framework, legal, tax, operating economics, closing, and post-close.",
+    "31 chapters across 7 parts: how to buy, underwrite, operate, and protect a high-performing San Miguel de Allende short-term rental investment.",
 };
 
-const CHAPTERS = [
-  { num: '01', title: 'Why San Miguel',      summary: 'Demand drivers, demographic tailwinds, the regulatory landscape, and what makes SMA structurally different from other Mexican STR markets.', pages: 6 },
-  { num: '02', title: 'The 6 neighborhoods', summary: 'Centro, Atascadero, Guadiana, San Antonio, Los Frailes, La Lejona — yield, ADR, occupancy, lifestyle fit, and basis trends for each.',         pages: 9 },
-  { num: '03', title: 'Acquisition framework', summary: 'How we screen properties: the 3 hard filters, the 7 secondary signals, and the 5 disqualifiers we walk away from automatically.',           pages: 7 },
-  { num: '04', title: 'Legal & ownership',   summary: 'Fideicomiso vs. SA de CV, what the notario actually does, common title issues, and the SRE permit process step-by-step.',                       pages: 8 },
-  { num: '05', title: 'Tax for foreigners',  summary: 'IVA, ISR, capital gains, the RFC registration, what your fiscal accountant should cost, and the optional regime that saves 25-30%.',           pages: 6 },
-  { num: '06', title: 'Operating economics', summary: 'Real Y1 P&L on three properties, including the one that underperformed. What management actually costs, what reserves you actually need.',     pages: 7 },
-  { num: '07', title: 'Closing checklist',   summary: 'Six-to-eight week timeline, six checkpoints, four parties. Where deals go sideways and how to add slack.',                                       pages: 5 },
-  { num: '08', title: 'After closing',       summary: 'Furnishing budget, photography, listing setup, dynamic-pricing, the maintenance calendar, and Year-1 vs Year-3 expectations.',                  pages: 6 },
+const HERO_STATS = [
+  { v: '31',   l: 'Chapters' },
+  { v: '7',    l: 'Parts' },
+  { v: '25',   l: 'Diligence items' },
+  { v: 'Open', l: 'No paywall, no PDF gate' },
 ];
 
-const HERO_STATS = [
-  { v: '8',      l: 'Chapters' },
-  { v: '3',      l: 'Real P&Ls' },
-  { v: '12,400', l: 'Words' },
-  { v: '24h',    l: 'Reply time' },
-];
+function GuideHero() {
+  return (
+    <section className='surface-dark' style={{ background: '#14130F', color: '#F5EFE2', padding: '100px 0 120px', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(31,58,46,0.92) 0%, rgba(20,19,15,0.88) 65%)' }} />
+      <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.08 }} preserveAspectRatio='xMidYMid slice'>
+        <pattern id='guide-hero-grid' x='0' y='0' width='48' height='48' patternUnits='userSpaceOnUse'>
+          <line x1='0' y1='0' x2='0' y2='48' stroke='#C9A55A' strokeWidth='0.5' />
+          <line x1='0' y1='0' x2='48' y2='0' stroke='#C9A55A' strokeWidth='0.5' />
+        </pattern>
+        <rect width='100%' height='100%' fill='url(#guide-hero-grid)' />
+      </svg>
+      <div className='container' style={{ position: 'relative' }}>
+        <div className='mono' style={{ fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#C9A55A', marginBottom: 32 }}>
+          The Buyer&apos;s Guide · Edition 2026 · 31 chapters · Open
+        </div>
+        <h1 className='display' style={{ fontSize: 'clamp(46px, 6.4vw, 96px)', margin: 0, letterSpacing: '-0.025em', lineHeight: 0.96, maxWidth: 1200 }}>
+          A Buyer&apos;s Investment Guide to <span className='display-italic' style={{ color: '#D9CFB8' }}>Short-Term Rental</span> Homes in San Miguel de Allende.
+        </h1>
+        <div className='guide-hero-grid' style={{ marginTop: 48, display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 64, alignItems: 'end' }}>
+          <p style={{ fontSize: 19, lineHeight: 1.55, color: 'rgba(245,239,226,0.78)', maxWidth: 720, margin: 0, fontFamily: 'var(--f-display)', fontStyle: 'italic', fontWeight: 400 }}>
+            How to buy, underwrite, operate, and protect a high-performing vacation rental investment in San Miguel de Allende, Mexico. 31 chapters across 7 parts — written for buyers who want the discipline, not the marketing.
+          </p>
+          <div style={{ background: 'rgba(245,239,226,0.04)', border: '1px solid rgba(245,239,226,0.18)', padding: 28 }}>
+            <div className='mono' style={{ fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#C9A55A' }}>Apply it to your situation</div>
+            <div className='display' style={{ fontSize: 26, marginTop: 10, lineHeight: 1.1 }}>30-minute walkthrough.</div>
+            <p style={{ fontSize: 13, color: 'rgba(245,239,226,0.7)', lineHeight: 1.55, marginTop: 12 }}>
+              The framework is one thing. Applying it to your budget, neighborhood, and timeline is another.
+            </p>
+            <Link href='/contact?intent=guide' className='btn btn-gold' style={{ width: '100%', marginTop: 18, display: 'block', textAlign: 'center' }}>Schedule a Call →</Link>
+          </div>
+        </div>
+        <div className='guide-stats-grid' style={{ marginTop: 80, paddingTop: 32, borderTop: '1px solid rgba(245,239,226,0.15)', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 32 }}>
+          {HERO_STATS.map((s, i) => (
+            <div key={i}>
+              <div className='display tnum' style={{ fontSize: 56, color: '#C9A55A', letterSpacing: '-0.02em', lineHeight: 1 }}>{s.v}</div>
+              <div className='mono' style={{ fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(245,239,226,0.6)', marginTop: 8 }}>{s.l}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function GuideEditorialIntro() {
+  return (
+    <section style={{ background: 'var(--paper)', padding: '100px 0' }}>
+      <div className='container-narrow'>
+        <div className='mono' style={{ fontSize: 11, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--ink-3)', marginBottom: 24 }}>
+          From the editor · April 2026
+        </div>
+        <p style={{ fontFamily: 'var(--f-display)', fontSize: 'clamp(24px, 2.4vw, 32px)', lineHeight: 1.3, color: 'var(--ink)', margin: 0, fontStyle: 'italic', fontWeight: 400 }}>
+          San Miguel de Allende is not a normal real estate market. It is a heritage city, a luxury lifestyle destination, a wedding and events market, a second-home market, and a short-term rental market — all operating at the same time.
+        </p>
+        <p style={{ fontFamily: 'var(--f-display)', fontSize: 19, lineHeight: 1.6, color: 'var(--ink-2)', marginTop: 24 }}>
+          This guide is written for buyers who want to acquire a home in San Miguel and use short-term rental income to improve the economics of ownership. The blunt truth: STR investment here can work extremely well — but only when the buyer underwrites correctly, buys the right asset, operates professionally, and understands taxes, platform rules, staffing, guest expectations, and maintenance risk.
+        </p>
+        <div style={{ marginTop: 32, padding: '20px 24px', borderLeft: '3px solid var(--gold)', background: '#FAF6EC', fontFamily: 'var(--f-mono)', fontSize: 12, lineHeight: 1.7, color: 'var(--ink-2)', letterSpacing: '0.02em' }}>
+          <strong style={{ letterSpacing: '0.16em', textTransform: 'uppercase', fontSize: 10 }}>Disclosure ·</strong> This is not legal, tax, or financial advice. Buyers should work with a licensed real estate professional, Mexican attorney, accountant, and qualified property manager before purchasing.
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function GuideTOC() {
+  return (
+    <section style={{ background: '#FAF6EC', padding: '100px 0', borderTop: '1px solid rgba(20,19,15,0.08)' }}>
+      <div className='container'>
+        <div className='guide-toc-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 80, alignItems: 'start' }}>
+          <div className='guide-toc-side' style={{ position: 'sticky', top: 80, alignSelf: 'start' }}>
+            <div className='mono' style={{ fontSize: 11, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--ink-3)', marginBottom: 16 }}>Contents</div>
+            <h2 className='display' style={{ fontSize: 64, marginTop: 0, lineHeight: 0.98, letterSpacing: '-0.025em' }}>
+              What&apos;s <span className='display-italic'>inside.</span>
+            </h2>
+            <p style={{ marginTop: 24, fontSize: 16, lineHeight: 1.65, color: 'var(--ink-2)', fontFamily: 'var(--f-display)', fontStyle: 'italic' }}>
+              Seven parts. Thirty-one chapters. Each one is the actual framework we use when we evaluate a deal — written so you can apply it whether or not you ever work with us.
+            </p>
+            <Link href='#ch-01' className='btn btn-primary' style={{ marginTop: 32, display: 'inline-block' }}>Start reading →</Link>
+          </div>
+          <div>
+            {GUIDE_PARTS.map(part => {
+              const partChapters = GUIDE_CHAPTERS.filter(c => c.part === part.id);
+              return (
+                <div key={part.id} style={{ marginBottom: 48 }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 16, paddingBottom: 14, borderBottom: '2px solid var(--ink)' }}>
+                    <span className='display' style={{ fontSize: 24, color: 'var(--gold)', letterSpacing: '-0.02em', fontStyle: 'italic' }}>Part {part.num}</span>
+                    <span className='display' style={{ fontSize: 24, color: 'var(--ink)' }}>{part.title}</span>
+                  </div>
+                  {partChapters.map(c => (
+                    <Link key={c.num} href={`#ch-${c.num}`} className='guide-toc-row' style={{ display: 'grid', gridTemplateColumns: '60px 1fr', gap: 20, padding: '18px 0', borderBottom: '1px solid rgba(20,19,15,0.1)', alignItems: 'baseline', textDecoration: 'none', color: 'inherit' }}>
+                      <div className='display tnum' style={{ fontSize: 22, color: 'var(--gold)', letterSpacing: '-0.02em' }}>{c.num}</div>
+                      <div>
+                        <div className='display' style={{ fontSize: 19, lineHeight: 1.25, color: 'var(--ink)' }}>{c.title}</div>
+                        <p style={{ marginTop: 6, fontSize: 13, lineHeight: 1.55, color: 'var(--ink-3)' }}>{c.summary}</p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ChaptersSection() {
+  const out: React.ReactNode[] = [];
+  let lastPart: string | null = null;
+  GUIDE_CHAPTERS.forEach((c, i) => {
+    if (c.part !== lastPart) {
+      const part = GUIDE_PARTS.find(p => p.id === c.part)!;
+      out.push(
+        <PartDivider key={`pd-${part.id}`} num={part.num} title={part.title} summary={PART_SUMMARIES[part.id]} />
+      );
+      lastPart = c.part;
+    }
+    const C = CHAPTERS_LIST[i];
+    out.push(
+      <div key={`wrap-${c.num}`} style={{ background: i % 2 === 0 ? 'var(--paper)' : '#FAF6EC' }}>
+        <div className='container'>
+          {C ? <C /> : null}
+        </div>
+      </div>
+    );
+  });
+  return <>{out}</>;
+}
+
+function GuideFinalCTA() {
+  return (
+    <section className='surface-dark' style={{ background: '#14130F', color: '#F5EFE2', padding: '120px 0', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(at 70% 30%, rgba(176,138,62,0.18) 0%, transparent 60%)' }} />
+      <div className='container-narrow' style={{ position: 'relative' }}>
+        <div className='mono' style={{ fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#C9A55A', marginBottom: 24 }}>
+          End of guide · Next step
+        </div>
+        <h2 className='display' style={{ fontSize: 'clamp(40px, 5vw, 72px)', margin: 0, lineHeight: 1, letterSpacing: '-0.025em' }}>
+          Want a memo on a <span className='display-italic' style={{ color: '#C9A55A' }}>specific property?</span>
+        </h2>
+        <p style={{ marginTop: 32, fontSize: 19, lineHeight: 1.6, color: 'rgba(245,239,226,0.78)', maxWidth: 720, fontFamily: 'var(--f-display)', fontStyle: 'italic' }}>
+          We will run this exact framework on a deal you are looking at — usually within 48 hours. Free for serious buyers. We turn down ~60% of requests when the property does not fit the framework. That is fine — we&apos;d rather tell you upfront.
+        </p>
+        <div style={{ marginTop: 48, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+          <Link href='/contact?intent=memo' className='btn btn-gold'>Request a memo →</Link>
+          <Link href='/contact?intent=guide' className='btn btn-ghost'>Schedule a 30-min call →</Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function GuideSourceNotes() {
+  return (
+    <section style={{ background: '#0E0D0A', color: 'rgba(245,239,226,0.7)', padding: '64px 0', borderTop: '1px solid rgba(245,239,226,0.08)' }}>
+      <div className='container-narrow'>
+        <div className='mono' style={{ fontSize: 11, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#C9A55A', marginBottom: 20 }}>
+          Source notes for buyers
+        </div>
+        <p style={{ fontSize: 14, lineHeight: 1.7, marginBottom: 16 }}>
+          San Miguel&apos;s tourism appeal is supported by international recognition, UNESCO heritage status, and continuing visitor demand. Travel + Leisure named San Miguel the best city in Mexico in 2025. Guanajuato&apos;s tourism economy reportedly generated 5.758 billion pesos of impact in November 2025. SMA reported more than 403,956 visitors during the December 24, 2024 to January 5, 2025 holiday period.
+        </p>
+        <p style={{ fontSize: 14, lineHeight: 1.7, marginBottom: 16 }}>
+          STR performance estimates vary by source. AirDNA reports market data from approximately 4,003 SMA Airbnb and Vrbo properties, with occupancy around 37% and average daily rate around $175. Airbtics reported median revenue of approximately MXN 309,000 from February 2025 through January 2026. AirROI reported a lower annual revenue estimate of approximately $17,475 USD for April 2025 through March 2026.
+        </p>
+        <p style={{ fontSize: 14, lineHeight: 1.7 }}>
+          Tax and compliance should be reviewed with professionals. SAT has a specific tax regime for income earned through technology platforms, including lodging and accommodation. Airbnb states that Mexico hosts are responsible for taxes, including VAT and income tax reporting.
+        </p>
+      </div>
+    </section>
+  );
+}
 
 export default function GuidePage() {
   return (
-    <div className='doc-page' data-screen-label='Buyers-Guide'>
-      <section className='surface-dark' style={{ background: '#14130F', color: '#F5EFE2', padding: '80px 0 100px', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, #1F3A2E 0%, #14130F 70%)', opacity: 0.95 }} />
-        <div className='container' style={{ position: 'relative' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 80, alignItems: 'end' }} className='guide-hero-grid'>
-            <div>
-              <div className='lead-num' style={{ color: '#C9A55A' }}>The Buyer&apos;s Guide · 8 chapters · Open</div>
-              <h1 className='display' style={{ fontSize: 'clamp(48px, 6.4vw, 92px)', margin: '20px 0 0', letterSpacing: '-0.025em', lineHeight: 0.96 }}>
-                Everything we have learned <span className='display-italic' style={{ color: '#D9CFB8' }}>buying SMA properties</span>, in one document.
-              </h1>
-              <p style={{ marginTop: 32, fontSize: 18, lineHeight: 1.55, color: 'rgba(245,239,226,0.78)', maxWidth: 600 }}>
-                8 chapters. Real P&amp;Ls, the legal framework, the tax math, the screening filters we apply to every property we evaluate. Read it openly on this site — then talk to us about your specific situation.
-              </p>
-            </div>
-            <div style={{ background: 'rgba(245,239,226,0.05)', border: '1px solid rgba(245,239,226,0.18)', padding: 28 }}>
-              <div className='mono' style={{ fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C9A55A' }}>Apply it to your situation</div>
-              <div className='display' style={{ fontSize: 28, marginTop: 12, lineHeight: 1.1 }}>30-minute walkthrough.</div>
-              <p style={{ fontSize: 13, color: 'rgba(245,239,226,0.7)', lineHeight: 1.55, marginTop: 14 }}>
-                The framework is one thing. Applying it to your budget, neighborhood preference, and timeline is another. Schedule a call — we&apos;ll come prepared.
-              </p>
-              <Link href='/contact?intent=guide' className='btn btn-gold' style={{ width: '100%', marginTop: 20, display: 'block', textAlign: 'center' }}>Schedule a Call →</Link>
-              <div className='mono' style={{ fontSize: 10, color: 'rgba(245,239,226,0.45)', marginTop: 12, lineHeight: 1.5 }}>Real human · 24h reply · No drip sequence.</div>
-            </div>
-          </div>
-
-          <div style={{ marginTop: 80, paddingTop: 32, borderTop: '1px solid rgba(245,239,226,0.15)', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 32 }} className='guide-stats-grid'>
-            {HERO_STATS.map((s, i) => (
-              <div key={i}>
-                <div className='display tnum' style={{ fontSize: 56, color: '#C9A55A', letterSpacing: '-0.02em', lineHeight: 1 }}>{s.v}</div>
-                <div className='mono' style={{ fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(245,239,226,0.6)', marginTop: 8 }}>{s.l}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section style={{ background: '#FBF8F0', padding: '100px 0' }}>
-        <div className='container'>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 80, alignItems: 'start' }} className='guide-toc-grid'>
-            <div style={{ position: 'sticky', top: 80, alignSelf: 'start' }}>
-              <div className='lead-num'>Table of contents</div>
-              <h2 className='display' style={{ fontSize: 56, marginTop: 12, lineHeight: 0.98, letterSpacing: '-0.02em' }}>
-                What&apos;s <span className='display-italic'>inside.</span>
-              </h2>
-              <p style={{ marginTop: 24, fontSize: 16, lineHeight: 1.6, color: '#3A362F' }}>
-                No fluff, no padding. Each chapter is the actual framework we use when we evaluate a deal — written so you can apply it whether or not you ever work with us.
-              </p>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {CHAPTERS.map(c => (
-                <div key={c.num} style={{ display: 'grid', gridTemplateColumns: '80px 1fr 60px', gap: 24, padding: '28px 0', borderTop: '1px solid rgba(20,19,15,0.15)', alignItems: 'baseline' }}>
-                  <div className='display tnum' style={{ fontSize: 28, color: '#C9A55A', letterSpacing: '-0.02em' }}>{c.num}</div>
-                  <div>
-                    <div className='display' style={{ fontSize: 24, lineHeight: 1.2, color: '#14130F' }}>{c.title}</div>
-                    <p style={{ marginTop: 10, fontSize: 14, lineHeight: 1.6, color: '#3A362F' }}>{c.summary}</p>
-                  </div>
-                  <div className='mono' style={{ fontSize: 11, color: '#3A362F', textAlign: 'right', letterSpacing: '0.06em' }}>{c.pages} pp</div>
-                </div>
-              ))}
-              <div style={{ borderTop: '1px solid rgba(20,19,15,0.15)' }} />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section style={{ background: '#FAF6EC', padding: '100px 0', borderTop: '1px solid rgba(20,19,15,0.1)' }}>
-        <div className='container'>
-          <div className='lead-num' style={{ marginBottom: 24 }}>Sample · Chapter 03 · Acquisition framework</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 56, alignItems: 'start' }} className='guide-preview-grid'>
-            <div>
-              <h3 className='display' style={{ fontSize: 36, lineHeight: 1.1, marginBottom: 24 }}>The three filters every property must clear.</h3>
-              <p style={{ fontSize: 17, lineHeight: 1.7, color: '#2A2722' }}>
-                About 7% of properties we screen each quarter clear all three filters. That number has held remarkably steady — when one filter loosens, another tightens. We will walk through the exact thresholds, then explain why each one exists with the data behind it.
-              </p>
-              <p style={{ fontSize: 17, lineHeight: 1.7, color: '#2A2722', marginTop: 16 }}>
-                <strong>Filter 1: Yield potential.</strong> Pro-forma gross yield must clear 8.0% on conservative occupancy assumptions (LRM uses 58% as the conservative case, vs the 62.4% market average). Below 8.0% gross, net economics get squeezed too hard by management, taxes, and reserves.
-              </p>
-              <p style={{ fontSize: 17, lineHeight: 1.7, color: '#2A2722', marginTop: 16 }}>
-                <strong>Filter 2: Walkability.</strong> The property must score 80+ on our walkability index, which weights distance to Jardín, distance to nearest restaurant cluster, and elevation gain. Properties below 80 see meaningful occupancy haircuts (we have data on this going back to 2021).
-              </p>
-              <p style={{ fontSize: 17, lineHeight: 1.7, color: '#2A2722', marginTop: 16, opacity: 0.55 }}>
-                <em>... 6 more pages of this chapter, plus the full filter framework, available on request.</em>
-              </p>
-            </div>
-            <div className='surface-dark' style={{ background: '#14130F', color: '#F5EFE2', padding: 32 }}>
-              <div className='mono' style={{ fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C9A55A' }}>Want a memo on a specific property?</div>
-              <div className='display' style={{ fontSize: 22, marginTop: 12, lineHeight: 1.2 }}>We will run the framework on a deal you are looking at — usually within 48 hours.</div>
-              <Link href='/contact?intent=memo' className='btn btn-gold' style={{ width: '100%', marginTop: 24 }}>Request a memo →</Link>
-              <div className='mono' style={{ fontSize: 10, color: 'rgba(245,239,226,0.5)', marginTop: 16, letterSpacing: '0.06em', lineHeight: 1.6 }}>
-                Free for serious buyers. We turn down ~60% of requests when the property does not fit the framework — that is fine, we&apos;d rather tell you upfront.
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
+    <div className='doc-page' data-screen-label='Buyers-Guide-Long'>
+      <GuideHero />
+      <GuideEditorialIntro />
+      <GuideTOC />
+      <ChaptersSection />
+      <GuideFinalCTA />
+      <GuideSourceNotes />
       <Disclaimer />
-      <StickyCTA label='Questions on the guide?' cta='Schedule a Call' href='/contact' />
+      <StickyCTA label='Want a memo on a specific home?' cta='Request memo' href='/contact?intent=memo' />
     </div>
   );
 }

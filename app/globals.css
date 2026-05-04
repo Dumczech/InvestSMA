@@ -121,6 +121,11 @@ html { overflow-x: hidden; }
   padding: 0 32px;
 }
 .doc-page .container { max-width: var(--container-w); margin: 0 auto; padding: 0 32px; }
+.container-narrow {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 0 32px;
+}
 
 /* Bundle-style pages render their own dark/cream sections; opt out of the
    global dark body background by wrapping the page in .doc-page so its
@@ -476,6 +481,49 @@ body:has(.nav) { background: var(--paper); color: var(--ink); }
   .nf-grid {
     grid-template-columns: 1fr !important;
     gap: 24px !important;
+  }
+
+  /* Long-form guide (/guide) — 31-chapter editorial layout. Each grid
+     class is set inline by app/guide/blocks.tsx and chapters.tsx; we
+     collapse them to one column at mobile so the typography reflows. */
+  .guide-toc-side {
+    position: static !important;
+  }
+  .guide-chapter-head {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+    padding-top: 40px !important;
+  }
+  .guide-part-divider-grid {
+    grid-template-columns: 1fr !important;
+    gap: 24px !important;
+  }
+  .guide-compare-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .guide-compare-grid > div:first-child {
+    border-right: none !important;
+    border-bottom: 1px solid rgba(20,19,15,0.12) !important;
+  }
+  .guide-stat-strip {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .guide-checklist {
+    grid-template-columns: 1fr !important;
+  }
+  .guide-bed-row,
+  .guide-uw-grid,
+  .guide-step-row,
+  .guide-ops-grid,
+  .guide-redflag-row,
+  .guide-services-grid,
+  .guide-dont-row {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+  .guide-pnl-row {
+    grid-template-columns: 1fr auto !important;
+    gap: 8px !important;
   }
   .tax-layout,
   .tax-topic {
