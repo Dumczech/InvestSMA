@@ -65,6 +65,19 @@ export async function POST(req: NextRequest) {
     const tags = tagsRaw.split(',').map(t => t.trim()).filter(Boolean);
     if (!file) return NextResponse.json({ ok: false, error: 'Missing file' }, { status: 400 });
 
+    // Client-probed metadata (videos only — the browser reads
+    // duration / videoWidth / videoHeight via <video> preload). Pure
+    // form fields, parsed defensively.
+    const numFromForm = (k: string) => {
+      const v = form.get(k);
+      if (typeof v !== 'string' || !v) return null;
+      const n = Number(v);
+      return Number.isFinite(n) && n > 0 ? Math.round(n) : null;
+    };
+    const clientWidth    = numFromForm('width');
+    const clientHeight   = numFromForm('height');
+    const clientDuration = numFromForm('duration_ms');
+
     // Resize / re-encode large images, reject anything that violates
     // the size or minimum-dimension limits. Non-image files pass
     // through untouched.
@@ -88,8 +101,12 @@ export async function POST(req: NextRequest) {
       folder: folderInput || moduleInput || null,
       name: file.name,
       size_bytes: processed.size_bytes,
-      width:  processed.width,
-      height: processed.height,
+      // Sharp computes width/height for images. For videos that come
+      // through processed.processed=false, fall back to the values
+      // the browser captured at the source.
+      width:  processed.width  ?? clientWidth,
+      height: processed.height ?? clientHeight,
+      duration_ms: clientDuration,
       alt_text: altText,
       tags,
       uploaded_by: 'admin',
@@ -99,8 +116,9 @@ export async function POST(req: NextRequest) {
       ok: true,
       processed: processed.processed,
       size_bytes: processed.size_bytes,
-      width:  processed.width,
-      height: processed.height,
+      width:       processed.width  ?? clientWidth,
+      height:      processed.height ?? clientHeight,
+      duration_ms: clientDuration,
     });
   } catch (e) {
     if (e instanceof MediaValidationError) {

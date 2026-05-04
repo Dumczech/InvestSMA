@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Topbar, Icon } from '../AdminShell';
 import { MEDIA_LIMITS_TEXT } from '@/lib/media/limits';
+import { probeVideo } from '@/lib/media/probe-client';
 
 // Folder tree sidebar, grid + list views, search / kind filter / sort,
 // multi-select bulk actions, and a detail drawer over the
@@ -636,6 +637,17 @@ function UploadModal({ onClose, onUploaded }: { onClose: () => void; onUploaded:
       fd.set('module', folderName);
       fd.set('alt_text', altText);
       fd.set('tags', tags);
+
+      // For videos, probe the file in-browser so the server can store
+      // duration + dimensions without bundling ffprobe.
+      const file = fd.get('file');
+      if (file instanceof File && file.type.startsWith('video/')) {
+        const meta = await probeVideo(file);
+        if (meta.duration_ms != null) fd.set('duration_ms', String(meta.duration_ms));
+        if (meta.width  != null) fd.set('width',  String(meta.width));
+        if (meta.height != null) fd.set('height', String(meta.height));
+      }
+
       const r = await fetch('/api/admin/media-assets', { method: 'POST', body: fd });
       const j = await r.json();
       if (!j.ok) throw new Error(j.error || 'Upload failed');

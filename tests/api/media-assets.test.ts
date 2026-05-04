@@ -221,6 +221,69 @@ describe('POST /api/admin/media-assets — multipart upload flow', () => {
     }));
   });
 
+  it('uses client-probed duration / width / height for videos (sharp returns nulls)', async () => {
+    storageUploadMock.mockResolvedValueOnce({ error: null });
+    insertMock.mockResolvedValueOnce({ error: null });
+    // Video pass-through: processor leaves dims null.
+    processUploadMock.mockImplementationOnce(async (file: File) => ({
+      buffer: Buffer.from(await file.arrayBuffer()),
+      contentType: file.type,
+      size_bytes: file.size,
+      width: null,
+      height: null,
+      processed: false,
+    }));
+
+    const fd = new FormData();
+    fd.set('file', new File([new Uint8Array([0])], 'walkthrough.mp4', { type: 'video/mp4' }));
+    fd.set('folder', 'site/video');
+    fd.set('duration_ms', '92500');
+    fd.set('width', '1920');
+    fd.set('height', '1080');
+
+    const req = new Request('http://test.local/api/admin/media-assets', {
+      method: 'POST',
+      body: fd,
+    }) as unknown as import('next/server').NextRequest;
+
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual(expect.objectContaining({
+      ok: true, duration_ms: 92500, width: 1920, height: 1080,
+    }));
+    expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({
+      mime_type: 'video/mp4',
+      duration_ms: 92500,
+      width: 1920,
+      height: 1080,
+    }));
+  });
+
+  it('drops bogus client-probed values (negative / NaN)', async () => {
+    storageUploadMock.mockResolvedValueOnce({ error: null });
+    insertMock.mockResolvedValueOnce({ error: null });
+
+    const fd = new FormData();
+    fd.set('file', new File([new Uint8Array([1])], 'bad.mp4', { type: 'video/mp4' }));
+    fd.set('duration_ms', '-99');
+    fd.set('width', 'abc');
+
+    const req = new Request('http://test.local/api/admin/media-assets', {
+      method: 'POST',
+      body: fd,
+    }) as unknown as import('next/server').NextRequest;
+
+    await POST(req);
+    expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({
+      duration_ms: null,
+      // The default mock returns 1200×800 for image sharp; for this video
+      // it'd return processed=true. We just want to know the form garbage
+      // didn't poison the row.
+    }));
+    const insertArg = insertMock.mock.calls[0][0] as Record<string, unknown>;
+    expect(insertArg.duration_ms).toBeNull();
+  });
+
   it('400s when file is missing from multipart', async () => {
     const fd = new FormData();
     fd.set('module', 'property');
