@@ -35,7 +35,9 @@
 body {
   background: #121212;
   color: #F4F0E6;
+  overflow-x: hidden;
 }
+html { overflow-x: hidden; }
 
 .card {
   @apply rounded-2xl border border-white/10 bg-white/5 backdrop-blur;
@@ -119,6 +121,11 @@ body {
   padding: 0 32px;
 }
 .doc-page .container { max-width: var(--container-w); margin: 0 auto; padding: 0 32px; }
+.container-narrow {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 0 32px;
+}
 
 /* Bundle-style pages render their own dark/cream sections; opt out of the
    global dark body background by wrapping the page in .doc-page so its
@@ -402,6 +409,197 @@ body:has(.nav) { background: var(--paper); color: var(--ink); }
   to   { opacity: 1; transform: translateY(0); }
 }
 .fade-up { animation: fadeUp 800ms ease-out both; }
+
+/* ===== Mobile (homepage section grids set inline as 1fr auto / repeat(N,
+   1fr); inline styles win over CSS, so we override with !important). ===== */
+@media (max-width: 720px) {
+  .container { padding: 0 20px; }
+
+  .hero-grid {
+    grid-template-columns: 1fr !important;
+    gap: 32px !important;
+  }
+  .hero-data-card {
+    width: 100% !important;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .credibility-grid {
+    grid-template-columns: 1fr !important;
+    gap: 32px !important;
+  }
+  .credibility-stats {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .featured-grid,
+  .market-grid,
+  .video-grid,
+  .insight-grid,
+  .lead-capture-grid {
+    grid-template-columns: 1fr !important;
+    gap: 24px !important;
+  }
+  .lead-capture-grid { gap: 32px !important; }
+
+  /* About page section grids */
+  .are-grid,
+  .broker-grid,
+  .lrm-grid,
+  .pullquote-grid,
+  .closing-grid {
+    grid-template-columns: 1fr !important;
+    gap: 32px !important;
+  }
+  .criteria-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+  .pullquote-foot {
+    grid-template-columns: 1fr !important;
+  }
+  .playbook-row {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+
+  /* Cases / guide / reports / tax / 404 grids */
+  .cases-stats-grid,
+  .guide-stats-grid,
+  .report-headline-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .case-row,
+  .cases-method-grid,
+  .guide-hero-grid,
+  .guide-toc-grid,
+  .guide-preview-grid,
+  .report-hero-grid,
+  .report-toc-grid,
+  .report-archive-row,
+  .nf-grid {
+    grid-template-columns: 1fr !important;
+    gap: 24px !important;
+  }
+
+  /* Long-form guide (/guide) — 31-chapter editorial layout. Each grid
+     class is set inline by app/guide/blocks.tsx and chapters.tsx; we
+     collapse them to one column at mobile so the typography reflows. */
+  .guide-toc-side {
+    position: static !important;
+  }
+  .guide-chapter-head {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+    padding-top: 40px !important;
+  }
+  .guide-part-divider-grid {
+    grid-template-columns: 1fr !important;
+    gap: 24px !important;
+  }
+  .guide-compare-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .guide-compare-grid > div:first-child {
+    border-right: none !important;
+    border-bottom: 1px solid rgba(20,19,15,0.12) !important;
+  }
+  .guide-stat-strip {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .guide-checklist {
+    grid-template-columns: 1fr !important;
+  }
+  .guide-bed-row,
+  .guide-uw-grid,
+  .guide-step-row,
+  .guide-ops-grid,
+  .guide-redflag-row,
+  .guide-services-grid,
+  .guide-dont-row {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+  .guide-pnl-row {
+    grid-template-columns: 1fr auto !important;
+    gap: 8px !important;
+  }
+  .tax-layout,
+  .tax-topic {
+    grid-template-columns: 1fr !important;
+  }
+  .tax-bullet {
+    grid-template-columns: 1fr !important;
+    gap: 4px !important;
+  }
+
+  /* Property memo (/properties/[slug]) */
+  .memo-title-grid,
+  .memo-hero-strip,
+  .memo-section-head,
+  .memo-grid-2,
+  .memo-grid-3,
+  .memo-upgrades-grid,
+  .memo-strategy-grid,
+  .memo-strategy-stats,
+  .memo-cta-grid {
+    grid-template-columns: 1fr !important;
+    gap: 24px !important;
+  }
+  .memo-grid-4,
+  .memo-cta-steps {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
+  }
+  /* Force the memo's deal-terms inner card to wrap so the fixed width
+     can't push the page wider than the viewport. */
+  .memo-title-grid > div,
+  .memo-hero-strip > * {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  /* Insights post (/insights/[slug]) */
+  .post-body-grid,
+  .related-grid,
+  .post-cta {
+    grid-template-columns: 1fr !important;
+    gap: 24px !important;
+  }
+
+  /* ROI calculator */
+  .roi-grid,
+  .sensitivity-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+
+  /* Homepage hero — desktop sizes the section to 100vh + 720px min and
+     anchors content to flex-end. On a 700px-tall phone the multi-line
+     headline overflows the section's available area and the first line
+     hides behind the ticker. Let the section grow with content,
+     position content top-down, and shrink the headline so it fits. */
+  .hero-section {
+    height: auto !important;
+    min-height: 0 !important;
+    padding: 32px 0 56px;
+  }
+  .hero-content-anchor {
+    position: relative !important;
+    inset: auto !important;
+    justify-content: flex-start !important;
+    padding-bottom: 0 !important;
+  }
+  .hero-headline {
+    font-size: clamp(36px, 9vw, 56px) !important;
+    line-height: 1.05 !important;
+  }
+  /* Decorative bottom strip ("↓ Scroll · 01 of 06" + GPS coords) doesn't
+     fit the new auto-height layout cleanly; the data card already
+     occupies the bottom on phones. Hide on small viewports. */
+  .hero-bottom-strip { display: none !important; }
+}
 
 /* ===== Form fields (lead-capture / contact / roi-calculator) ===== */
 .field-group { display: flex; flex-direction: column; gap: 8px; }

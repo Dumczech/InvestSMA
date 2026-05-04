@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
+import { getSupabaseBrowserAuthClient } from '@/lib/supabase/auth-browser';
 
 // Faithful port of design5/.../admin/admin-shell.jsx — the operations
 // dashboard chrome. Sidebar nav, top breadcrumb/search bar, icon set,
@@ -29,10 +30,16 @@ const NAV: Array<{ section: string; items: NavItem[] }> = [
   {
     section: 'Data',
     items: [
-      { id: 'metrics',  label: 'Metrics & Stats',     icon: 'pulse',  href: '/admin/analytics' },
       { id: 'market',   label: 'Market Data',         icon: 'chart',  href: '/admin/market-warehouse' },
       { id: 'airdna',   label: 'AirDNA Benchmarks',   icon: 'calc',   href: '/admin/audit-logs' },
       { id: 'import',   label: 'CSV Import',          icon: 'upload', href: '/admin/import-center' },
+    ],
+  },
+  {
+    section: 'Integrations',
+    items: [
+      { id: 'metrics', label: 'Site Analytics', icon: 'pulse', href: '/admin/analytics' },
+      { id: 'guesty',  label: 'Guesty',         icon: 'link',  href: '/admin/guesty' },
     ],
   },
 ];
@@ -129,6 +136,23 @@ export function Sidebar() {
   const isActive = (href: string) =>
     href === '/admin' ? pathname === '/admin' : pathname.startsWith(href);
 
+  const [user, setUser] = useState<{ email: string | null; name: string; initials: string } | null>(null);
+  useEffect(() => {
+    const supabase = getSupabaseBrowserAuthClient();
+    supabase.auth.getUser().then(({ data }) => {
+      const u = data?.user;
+      if (!u) return;
+      const email = u.email ?? '';
+      const name = (u.user_metadata?.full_name as string | undefined)
+        ?? email.split('@')[0].split('.').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+      setUser({
+        email,
+        name,
+        initials: (email.slice(0, 2) || 'AD').toUpperCase(),
+      });
+    });
+  }, []);
+
   return (
     <aside className='sidebar'>
       <div className='sidebar-brand'>
@@ -163,13 +187,23 @@ export function Sidebar() {
             <Icon name='link' />
             <span>View public site</span>
           </Link>
+          <form method='post' action='/admin/auth/signout' style={{ margin: 0 }}>
+            <button
+              type='submit'
+              className='sidebar-link'
+              style={{ background: 'none', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer', font: 'inherit' }}
+            >
+              <Icon name='close' />
+              <span>Sign out</span>
+            </button>
+          </form>
         </div>
       </nav>
       <div className='sidebar-foot'>
-        <div className='avatar'>JM</div>
+        <div className='avatar'>{user?.initials ?? '—'}</div>
         <div className='who'>
-          <div className='name'>Justin McCarter</div>
-          <div className='role'>Owner · LRM</div>
+          <div className='name'>{user?.name ?? 'Admin'}</div>
+          <div className='role'>{user?.email ?? 'Operator'}</div>
         </div>
       </div>
     </aside>

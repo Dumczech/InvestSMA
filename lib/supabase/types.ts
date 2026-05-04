@@ -38,6 +38,17 @@ type LeadsRow = {
   neighborhoods: string[] | null;
   message: string | null;
   source_page: string | null;
+  status: string;
+  source: string | null;
+  assigned_to: string | null;
+};
+
+type LeadNotesRow = {
+  id: string;
+  lead_id: string;
+  body: string;
+  author: string | null;
+  created_at: string;
 };
 
 type PropertiesRow = {
@@ -68,6 +79,29 @@ type PropertiesRow = {
   accent2: string | null;
   style: 'colonial' | 'hacienda' | 'villa' | null;
   hero_image: string | null;
+  // 20260504_property_metadata.sql
+  headline: string | null;
+  position_in_market: 'Entry' | 'Premium' | 'Editorial' | 'Trophy' | null;
+  occupancy_low_pct: number | null;
+  occupancy_high_pct: number | null;
+  lrm_management_fee_pct: number | null;
+  cleaning_per_stay_usd: number | null;
+  property_tax_usd: number | null;
+  utilities_per_year_usd: number | null;
+  insurance_per_year_usd: number | null;
+  maintenance_reserve_pct: number | null;
+  walkthrough_video_url: string | null;
+  floor_plans: Json | null;
+  upgrade_strategy: string | null;
+  lrm_operating_plan: string | null;
+  key_metrics: Json | null;
+  seo_title: string | null;
+  seo_description: string | null;
+  og_image_path: string | null;
+  gate_full_memo: boolean;
+  featured_on_homepage: boolean;
+  allow_indexing: boolean;
+  assigned_advisor: string | null;
 };
 
 type MarketReportsRow = {
@@ -78,6 +112,9 @@ type MarketReportsRow = {
   summary: string | null;
   pdf_path: string | null;
   published: boolean;
+  // 20260504_articles_reports_metadata.sql
+  gated: boolean;
+  download_count: number;
 };
 
 type BenchmarkDataRow = {
@@ -109,6 +146,13 @@ type ArticlesRow = {
   body_json: Json | null;
   related: Json | null;
   published_at: string | null;
+  // 20260504_articles_reports_metadata.sql
+  hero_image_url: string | null;
+  hero_alt: string | null;
+  seo_title: string | null;
+  meta_description: string | null;
+  canonical_url: string | null;
+  review_status: 'draft' | 'review' | 'published';
 };
 
 type SiteContentRow = {
@@ -139,6 +183,13 @@ type MediaAssetsRow = {
   module: string | null;
   alt_text: string | null;
   uploaded_by: string | null;
+  name: string | null;
+  folder: string | null;
+  size_bytes: number | null;
+  width: number | null;
+  height: number | null;
+  duration_ms: number | null;
+  tags: string[] | null;
 };
 
 type ImportJobsRow = {
@@ -359,6 +410,7 @@ export interface Database {
   public: {
     Tables: {
       leads: Table<LeadsRow>;
+      lead_notes: Table<LeadNotesRow>;
       properties: Table<PropertiesRow>;
       market_reports: Table<MarketReportsRow>;
       benchmark_data: Table<BenchmarkDataRow>;

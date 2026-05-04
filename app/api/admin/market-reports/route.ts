@@ -26,21 +26,30 @@ export async function POST(req: NextRequest) {
   }
   try {
     const s = getSupabaseServerClient();
-    const payload = {
+    // Editable fields shared between insert and update. Default `gated`
+    // to true (the design's lead-gen baseline). `download_count` is
+    // owned by the download endpoint and explicitly NOT in the update
+    // path so editors can't reset it.
+    const editable = {
       title: String(body.title).trim(),
       period: String(body.period).trim(),
       summary: body.summary ? String(body.summary).trim() : null,
       pdf_path: body.pdf_path ? String(body.pdf_path).trim() : null,
       published: Boolean(body.published),
+      gated: body.gated == null ? true : Boolean(body.gated),
     };
 
     if (body.id) {
-      const { error } = await s.from('market_reports').update(payload).eq('id', body.id);
+      const { error } = await s.from('market_reports').update(editable).eq('id', body.id);
       if (error) throw error;
       return NextResponse.json({ ok: true, id: body.id });
     }
 
-    const { data, error } = await s.from('market_reports').insert(payload).select('id').single();
+    const { data, error } = await s
+      .from('market_reports')
+      .insert({ ...editable, download_count: 0 })
+      .select('id')
+      .single();
     if (error) throw error;
     return NextResponse.json({ ok: true, id: data?.id });
   } catch (e) {

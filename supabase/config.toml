@@ -1,9 +1,1 @@
-# Supabase project linkage. The CI workflow at
-# .github/workflows/supabase-migrate.yml reads this file when running
-# `supabase link` so it knows which project to target. Local CLI users
-# (e.g. `supabase db diff`, `supabase status`) also use it.
-#
-# `project_id` is the project ref (the slug in your project URL,
-# e.g. https://supabase.com/dashboard/project/<project_id>).
-
 project_id = "ptgjrlsbtramoettakfs"
